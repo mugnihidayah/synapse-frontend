@@ -10,7 +10,7 @@ Synapse is a next-generation chat interface for Retrieval-Augmented Generation (
 
 ### 🧠 Advanced AI Interaction
 - **Real-time Streaming**: Fluid response generation with "Thinking" indicators.
-- **RAG Capabilities**: Upload documents (PDF, DOCX, TXT, MD) and chat with them.
+- **RAG Capabilities**: Upload documents (PDF, DOCX, TXT) and chat with them.
 - **Model Control**: Customize Model (Llama-3, etc.), Temperature, and Output Language.
 
 ### 🔐 Secure & Persistent
@@ -18,11 +18,7 @@ Synapse is a next-generation chat interface for Retrieval-Augmented Generation (
 - **Cloud Database**: Chat history and user preferences persisted in **Neon (PostgreSQL)** via **Drizzle ORM**.
 - **Session Management**: Create, delete, and switch between multiple chat sessions securely.
 
-### ✨ Polished UX
-- **Public Landing Page**: Guests can view the UI and type prompts; authentication is triggered only on action.
-- **Smart Logic**: Auto-titling of new chats based on context.
-- **Responsive**: Fully optimized for Desktop and Mobile.
-- **Theming**: Dark/Light mode support.
+
 
 ## 🛠️ Tech Stack
 
@@ -99,6 +95,12 @@ src/
 │   └── db-actions.ts # Server-side DB operations
 └── types/            # TypeScript Interfaces
 ```
+
+## 🚀 Deployment
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmugnihidayah%2Fsynapse-frontend&env=DATABASE_URL,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,CLERK_SECRET_KEY,API_URL,API_KEY)
+
+Remember to add your **Neon Database URL**, **Clerk Keys**, and **Backend API URL** in the Vercel Project Settings.
 
 ## 🤝 Contributing
 
