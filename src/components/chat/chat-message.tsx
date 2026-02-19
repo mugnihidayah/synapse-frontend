@@ -54,7 +54,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     return (
         <div
             className={cn(
-                "group relative flex gap-4 px-4 py-6 sm:px-6",
+                "group relative flex gap-3 px-3 py-6 sm:gap-4 sm:px-6",
                 isUser ? "bg-transparent" : "bg-muted/20"
             )}
         >
