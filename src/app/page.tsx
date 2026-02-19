@@ -117,6 +117,28 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isLoaded, userId]);
 
+    // Cleanup on Logout
+    const wasLoggedIn = useRef(false);
+    useEffect(() => {
+        if (userId) {
+            wasLoggedIn.current = true;
+        } else if (isLoaded && !userId && wasLoggedIn.current) {
+            // User just logged out - clear potentially sensitive state
+            setMessages([]);
+            setSessions([]);
+            setSessionId(null);
+            setUploadedFiles([]);
+            setSessionError(false);
+            setSettings({
+                language: "id",
+                model: "llama-3.3-70b-versatile",
+                temperature: 0.3,
+            });
+            initialized.current = false;
+            wasLoggedIn.current = false;
+        }
+    }, [isLoaded, userId]);
+
     // Handle Settings Change with Debounce Save
     const handleSettingsChange = (newSettings: AppSettings) => {
         if (!requireAuth()) return; // Trigger auth for settings change
