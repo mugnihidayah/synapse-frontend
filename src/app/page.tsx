@@ -515,7 +515,7 @@ export default function Home() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-                    <div className="mx-auto max-w-3xl pb-6">
+                    <div className="mx-auto max-w-3xl pb-32 pt-4">
                         {messages.length === 0 ? (
                             <div className="flex h-full min-h-[60vh] items-center justify-center">
                                 <div className="text-center">
