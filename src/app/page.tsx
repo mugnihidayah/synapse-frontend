@@ -593,7 +593,7 @@ export default function Home() {
                 </div>
 
                 {/* Input */}
-                <div className="border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+                <div className="border-t border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4">
                     <div className="mx-auto w-full max-w-3xl">
                         <ChatInput
                             onSend={handleSend}
