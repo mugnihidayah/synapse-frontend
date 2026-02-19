@@ -69,7 +69,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
             </div>
 
-            <div className="flex-1 space-y-2 overflow-hidden">
+            <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
                 <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">
                         {isUser ? "You" : "Synapse"}
@@ -85,23 +85,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {isThinking ? (
                     <ThinkingDots />
                 ) : (
-                    <div className="prose prose-invert w-full min-w-0 max-w-none break-words prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-pre:max-w-[calc(100vw-4rem)] sm:prose-pre:max-w-2xl">
+                    <div className="prose prose-invert w-full max-w-full break-words prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2">
                         <ReactMarkdown 
                             remarkPlugins={[remarkGfm, remarkMath]} 
                             rehypePlugins={[rehypeKatex, rehypeHighlight]}
                             components={{
                                 table: ({ ...props }) => (
-                                    <div className="my-4 w-full overflow-x-auto rounded-lg border border-border/50 bg-card/30">
-                                        <table {...props} className="w-full min-w-125" />
+                                    <div className="my-4 block w-full max-w-[calc(100vw-6rem)] overflow-x-auto rounded-lg border border-border/50 bg-card/30">
+                                        <table {...props} className="w-full min-w-[500px]" />
                                     </div>
                                 ),
                                 pre: ({ ...props }) => (
-                                    <div className="my-3 w-full overflow-x-auto rounded-lg bg-black/40">
-                                        <pre {...props} className="p-4" />
+                                    <div className="my-3 block w-full max-w-[calc(100vw-6rem)] overflow-x-auto rounded-lg bg-black/40">
+                                        <pre {...props} className="p-4 min-w-full" />
                                     </div>
                                 ),
                                 code: ({ ...props }) => (
-                                    <code {...props} className="wrap-break-word px-1 py-0.5 rounded-sm bg-muted/50 font-mono text-sm" />
+                                    <code {...props} className="break-words px-1 py-0.5 rounded-sm bg-muted/50 font-mono text-sm" />
                                 )
                             }}
                         >
