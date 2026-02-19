@@ -12,6 +12,21 @@ import { Menu, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, useClerk } from "@clerk/nextjs";
 
+const EXAMPLE_PROMPTS = {
+    id: [
+        "Rangkum dokumen ini secara lengkap",
+        "Apa poin-poin utama dari dokumen?",
+        "Jelaskan konsep kunci yang dibahas",
+        "Buat daftar istilah penting beserta definisinya",
+    ],
+    en: [
+        "Summarize this document completely",
+        "What are the main points of the document?",
+        "Explain the key concepts discussed",
+        "Create a list of important terms and definitions",
+    ]
+};
+
 export default function Home() {
     const { userId, isLoaded } = useAuth();
     const { openSignIn } = useClerk();
@@ -390,10 +405,10 @@ export default function Home() {
 
         } catch (error: unknown) {
              // Ignore abort errors
-             if (error instanceof Error && error.name === 'AbortError') {
-                 console.log("Stream aborted");
-                 return;
-             }
+            if (error instanceof Error && error.name === 'AbortError') {
+                console.log("Stream aborted");
+                return;
+            }
 
             console.error("Stream failed:", error);
             const errorMessage = error instanceof Error ? error.message : "Response failed.";
@@ -503,12 +518,7 @@ export default function Home() {
                                     {/* Show example prompts for guests too (isSessionReady check might fail for guests, so we relax it) */}
                                     {(!userId || (isSessionReady && !isSessionLoading && !sessionError)) && (
                                         <div className="mt-8 grid gap-2 sm:grid-cols-2 text-left max-w-lg mx-auto">
-                                            {[
-                                                "Rangkum dokumen ini secara lengkap",
-                                                "Apa poin-poin utama dari dokumen?",
-                                                "Jelaskan konsep kunci yang dibahas",
-                                                "Buat daftar istilah penting beserta definisinya",
-                                            ].map((prompt) => (
+                                            {EXAMPLE_PROMPTS[settings.language as "id" | "en"]?.map((prompt) => (
                                                 <button
                                                     key={prompt}
                                                     onClick={() => handleSend(prompt)}
