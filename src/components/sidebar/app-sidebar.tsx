@@ -147,6 +147,7 @@ export function AppSidebar({
                             </p>
                             <input
                                 type="file"
+                                multiple
                                 accept=".pdf,.txt,.docx,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
                                 onChange={handleFileSelect}
                                 className="absolute inset-0 cursor-pointer opacity-0"

@@ -485,7 +485,7 @@ export default function Home() {
             {/* Main Chat Area */}
             <div className="flex flex-1 flex-col min-h-0">
                 {/* Mobile Header */}
-                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 md:hidden">
+                <div className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 backdrop-blur-md px-4 py-3 md:hidden">
                     <div className="flex items-center gap-3">
                         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                             <SheetTrigger asChild>
