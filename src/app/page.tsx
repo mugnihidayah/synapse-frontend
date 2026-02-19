@@ -476,9 +476,9 @@ export default function Home() {
     // REMOVED: if (!userId) return null;
 
     return (
-        <div className="flex h-screen overflow-hidden bg-background">
+        <div className="flex h-[100dvh] overflow-hidden bg-background">
             {/* Desktop Sidebar */}
-            <div className="hidden md:block">
+            <div className="hidden md:block h-full">
                 <AppSidebar {...sidebarProps} />
             </div>
 

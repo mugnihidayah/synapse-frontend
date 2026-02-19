@@ -75,7 +75,7 @@ export function AppSidebar({
     };
 
     return (
-        <div className="flex h-screen w-72 shrink-0 flex-col border-r border-border/40 bg-card/50 backdrop-blur-xl overflow-y-auto">
+        <div className="flex h-full w-72 shrink-0 flex-col border-r border-border/40 bg-card/50 backdrop-blur-xl overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-4">
                 <h2 className="text-lg font-semibold">Synapse</h2>
