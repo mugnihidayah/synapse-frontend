@@ -22,12 +22,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const userMessage = body.query; // Assuming body is { query: "..." }
+    const { question, language } = body;
 
     // 1. Save User Message
-    if (userMessage) {
-        await saveMessage(sessionId, "user", userMessage);
+    if (question) {
+        await saveMessage(sessionId, "user", question);
     }
+
+    // Inject language instruction into the question for the backend
+    const languageInstruction = language === "id" 
+        ? " (Mohon jawab dalam Bahasa Indonesia)" 
+        : " (Please answer in English)";
+    
+    // Create new body with modified question
+    const backendBody = {
+        ...body,
+        question: question + languageInstruction
+    };
 
     const res = await fetch(
         `${API_URL}/api/v1/query/stream/${sessionId}`,
@@ -37,7 +48,7 @@ export async function POST(request: NextRequest) {
                 "Content-Type": "application/json",
                 "X-API-Key": API_KEY!,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(backendBody),
         }
     );
 
