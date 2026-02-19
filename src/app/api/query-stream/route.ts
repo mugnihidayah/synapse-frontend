@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
 
     // Inject language instruction into the question for the backend
     const languageInstruction = language === "id" 
-        ? " (Mohon jawab dalam Bahasa Indonesia)" 
-        : " (Please answer in English)";
+        ? " [PENTING: Jawab pertanyaan ini dalam Bahasa Indonesia] " 
+        : " [IMPORTANT: Answer this question strictly in English] ";
     
     // Create new body with modified question
     const backendBody = {
         ...body,
-        question: question + languageInstruction
+        question: languageInstruction + question
     };
 
     const res = await fetch(
