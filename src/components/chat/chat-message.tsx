@@ -85,7 +85,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {isThinking ? (
                     <ThinkingDots />
                 ) : (
-                    <div className="prose prose-invert max-w-none prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2">
+                    <div className="prose prose-invert max-w-none wrap-break-word prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-pre:max-w-[calc(100vw-4rem)] sm:prose-pre:max-w-2xl">
                         <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeHighlight]}>
                             {message.content}
                         </ReactMarkdown>
