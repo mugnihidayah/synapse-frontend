@@ -514,8 +514,8 @@ export default function Home() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto" ref={scrollRef}>
-                    <div className="mx-auto max-w-3xl pb-32 pt-4">
+                <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
+                    <div className="mx-auto max-w-3xl">
                         {messages.length === 0 ? (
                             <div className="flex h-full min-h-[60vh] items-center justify-center">
                                 <div className="text-center">
@@ -593,14 +593,16 @@ export default function Home() {
                 </div>
 
                 {/* Input */}
-                <div className="mx-auto w-full max-w-3xl">
-                    <ChatInput
-                        onSend={handleSend}
-                        // Enable input for guests (userId null) so they can trigger auth
-                        disabled={isStreaming || (!!userId && !isSessionReady)}
-                        isStreaming={isStreaming}
-                        onStop={handleStop}
-                    />
+                <div className="border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+                    <div className="mx-auto w-full max-w-3xl">
+                        <ChatInput
+                            onSend={handleSend}
+                            // Enable input for guests (userId null) so they can trigger auth
+                            disabled={isStreaming || (!!userId && !isSessionReady)}
+                            isStreaming={isStreaming}
+                            onStop={handleStop}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
