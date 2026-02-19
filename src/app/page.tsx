@@ -8,7 +8,7 @@ import { createSession, uploadFiles, queryStream, getHistory, getSessionMessages
 import { ChatMessage as ChatMessageType, AppSettings, ChatSession } from "@/types";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+import { Menu, Loader2, RefreshCw, RotateCcw, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, useClerk } from "@clerk/nextjs";
 
@@ -485,18 +485,32 @@ export default function Home() {
             {/* Main Chat Area */}
             <div className="flex flex-1 flex-col min-h-0">
                 {/* Mobile Header */}
-                <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3 md:hidden">
-                    <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-                        <SheetTrigger asChild>
-                            <Button variant="ghost" size="icon" className="shrink-0">
-                                <Menu className="h-5 w-5" />
-                            </Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="w-72 p-0" showCloseButton={false}>
-                            <AppSidebar {...sidebarProps} />
-                        </SheetContent>
-                    </Sheet>
-                    <h1 className="text-lg font-semibold">Synapse</h1>
+                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 md:hidden">
+                    <div className="flex items-center gap-3">
+                        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon" className="shrink-0">
+                                    <Menu className="h-5 w-5" />
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="w-72 p-0" showCloseButton={false}>
+                                <AppSidebar {...sidebarProps} />
+                            </SheetContent>
+                        </Sheet>
+                        <h1 className="text-lg font-semibold">Synapse</h1>
+                    </div>
+                    
+                    {!userId && (
+                        <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={() => openSignIn()}
+                            className="gap-2"
+                        >
+                            <LogIn className="h-4 w-4" />
+                            Sign In
+                        </Button>
+                    )}
                 </div>
 
                 {/* Messages */}
