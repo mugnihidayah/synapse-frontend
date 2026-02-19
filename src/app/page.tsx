@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Loader2, RefreshCw, RotateCcw, LogIn } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, UserButton } from "@clerk/nextjs";
 
 const EXAMPLE_PROMPTS = {
     id: [
@@ -500,7 +500,7 @@ export default function Home() {
                         <h1 className="text-lg font-semibold">Synapse</h1>
                     </div>
                     
-                    {!userId && (
+                    {!userId ? (
                         <Button 
                             variant="default" 
                             size="sm" 
@@ -510,6 +510,8 @@ export default function Home() {
                             <LogIn className="h-4 w-4" />
                             Sign In
                         </Button>
+                    ) : (
+                        <UserButton afterSignOutUrl="/" />
                     )}
                 </div>
 
