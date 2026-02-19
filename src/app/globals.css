@@ -125,8 +125,10 @@
   }
 }
 
-/* Hide Clerk Development Badge (Portfolio Hack) */
-.cl-development-badge {
+/* Hide Clerk Development Badge & Branding (Portfolio Hack) */
+.cl-development-badge,
+.cl-footer,
+.cl-userButtonPopoverFooter {
     display: none !important;
 }
 
