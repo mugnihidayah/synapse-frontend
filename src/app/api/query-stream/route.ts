@@ -30,14 +30,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Inject language instruction into the question for the backend
-    const languageInstruction = language === "id" 
-        ? " [PENTING: Jawab pertanyaan ini dalam Bahasa Indonesia] " 
-        : " [IMPORTANT: Answer this question strictly in English] ";
+    const targetLanguage = language === "id" ? "Bahasa Indonesia" : "English";
+    
+    const prefix = `[SYSTEM: You MUST answer the following question in ${targetLanguage}. Ignore any other language instructions.]\n\nQuestion: `;
+    const suffix = `\n\n(Remember: Answer strictly in ${targetLanguage})`;
     
     // Create new body with modified question
     const backendBody = {
         ...body,
-        question: languageInstruction + question
+        question: prefix + question + suffix
     };
 
     const res = await fetch(
