@@ -2,6 +2,8 @@
 
 Synapse is a next-generation chat interface for Retrieval-Augmented Generation (RAG) systems. Built with modern web technologies, it provides a seamless, production-grade experience for interacting with AI models and documents.
 
+> **Note**: This is the frontend interface for the [Synapse Instant Document Insight](https://github.com/mugnihidayah/synapse-instant-document-insight) backend project.
+
 ![Synapse UI](/public/synapse-preview.png)
 
 ## 🚀 Key Features
