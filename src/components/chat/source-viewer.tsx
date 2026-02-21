@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Source } from "@/types";
-import { FileText, Hash, Layers, X } from "lucide-react";
+import { FileText, Hash, Layers } from "lucide-react";
 import {
     Sheet,
     SheetContent,
@@ -176,19 +176,11 @@ export function SourceViewer({ source, query, open, onOpenChange }: SourceViewer
             >
                 {/* Header */}
                 <SheetHeader className="border-b border-border/50 p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="h-4 w-4 shrink-0 text-emerald-500" />
-                            <SheetTitle className="text-sm font-medium truncate">
-                                {sourceName}
-                            </SheetTitle>
-                        </div>
-                        <button
-                            onClick={() => onOpenChange(false)}
-                            className="rounded-md p-1 hover:bg-muted text-muted-foreground"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 shrink-0 text-emerald-500" />
+                        <SheetTitle className="text-sm font-medium truncate">
+                            {sourceName}
+                        </SheetTitle>
                     </div>
 
                     {/* Metadata badges */}
