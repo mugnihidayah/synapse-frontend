@@ -28,5 +28,7 @@ export const messages = pgTable('synapse_messages', {
   chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }).notNull(),
   role: roleEnum('role').notNull(),
   content: text('content').notNull(),
+  // Store sources, grounding, debug info for assistant messages
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

@@ -6,14 +6,14 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-    const { sessionId, role, content } = await req.json();
+    const { sessionId, role, content, metadata } = await req.json();
 
     if (!sessionId || !role || !content) {
         return new NextResponse("Missing required fields", { status: 400 });
     }
 
     try {
-        const message = await saveMessage(sessionId, role, content);
+        const message = await saveMessage(sessionId, role, content, metadata);
         return NextResponse.json(message);
     } catch {
         return new NextResponse("Internal Error", { status: 500 });

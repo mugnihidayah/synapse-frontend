@@ -15,6 +15,7 @@ import "highlight.js/styles/github-dark.min.css";
 
 interface ChatMessageProps {
     message: ChatMessageType;
+    query?: string;
     onFeedback?: (rating: -1 | 1) => void;
     isSubmittingFeedback?: boolean;
 }
@@ -31,6 +32,7 @@ function ThinkingDots() {
 
 export function ChatMessage({
     message,
+    query,
     onFeedback,
     isSubmittingFeedback,
 }: ChatMessageProps) {
@@ -138,7 +140,7 @@ export function ChatMessage({
                     </div>
                 )}
 
-                {message.sources && <SourceCards sources={message.sources} />}
+                {message.sources && <SourceCards sources={message.sources} query={query} />}
 
                 {!isUser && message.rewritten_query && (
                     <div className="rounded-md border border-border/50 bg-muted/20 p-2 text-xs text-muted-foreground">

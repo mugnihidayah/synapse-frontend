@@ -71,6 +71,7 @@ interface DBMessage {
     id: string;
     role: "user" | "assistant";
     content: string;
+    metadata?: Record<string, unknown> | null;
     createdAt: string;
 }
 
@@ -323,6 +324,14 @@ export default function HomeClient() {
                 role: m.role,
                 content: m.content,
                 timestamp: new Date(m.createdAt),
+                ...(m.metadata && {
+                    sources: m.metadata.sources as ChatMessageType["sources"],
+                    grounded: m.metadata.grounded as boolean | undefined,
+                    grounding_score: m.metadata.grounding_score as number | undefined,
+                    rewritten_query: m.metadata.rewritten_query as string | null | undefined,
+                    model_used: m.metadata.model_used as string | undefined,
+                    debug: m.metadata.debug as ChatMessageType["debug"],
+                }),
             }));
             setMessages(uiMessages);
             setUploadedFiles(session.files?.map((f) => f.name) || []);
@@ -507,6 +516,7 @@ export default function HomeClient() {
 
             let fullContent = "";
             let sseBuffer = "";
+            const streamMeta: Record<string, unknown> = {};
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -554,6 +564,14 @@ export default function HomeClient() {
                             parsed.grounding_score !== undefined ||
                             parsed.debug !== undefined
                         ) {
+                            // Accumulate metadata for persistence
+                            if (parsed.sources) streamMeta.sources = parsed.sources;
+                            if (parsed.model_used) streamMeta.model_used = parsed.model_used;
+                            if (parsed.rewritten_query !== undefined) streamMeta.rewritten_query = parsed.rewritten_query;
+                            if (parsed.grounded !== undefined) streamMeta.grounded = parsed.grounded;
+                            if (parsed.grounding_score !== undefined) streamMeta.grounding_score = parsed.grounding_score;
+                            if (parsed.debug) streamMeta.debug = parsed.debug;
+
                             setMessages((prev) =>
                                 prev.map((msg) =>
                                     msg.id === assistantId
@@ -595,7 +613,12 @@ export default function HomeClient() {
             );
 
             if (fullContent) {
-                await saveMessageAPI(sessionId, "assistant", fullContent);
+                await saveMessageAPI(
+                    sessionId,
+                    "assistant",
+                    fullContent,
+                    Object.keys(streamMeta).length > 0 ? streamMeta : null
+                );
             }
 
             if (shouldUpdateTitle) {
@@ -838,18 +861,28 @@ export default function HomeClient() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {messages.map((msg) => (
-                                    <ChatMessage
-                                        key={msg.id}
-                                        message={msg}
-                                        onFeedback={
-                                            msg.role === "assistant"
-                                                ? (rating) => handleFeedback(msg.id, rating)
-                                                : undefined
-                                        }
-                                        isSubmittingFeedback={feedbackLoading[msg.id]}
-                                    />
-                                ))}
+                                {messages.map((msg, idx) => {
+                                    const precedingQuery =
+                                        msg.role === "assistant"
+                                            ? [...messages.slice(0, idx)]
+                                                  .reverse()
+                                                  .find((m) => m.role === "user")?.content
+                                            : undefined;
+
+                                    return (
+                                        <ChatMessage
+                                            key={msg.id}
+                                            message={msg}
+                                            query={precedingQuery}
+                                            onFeedback={
+                                                msg.role === "assistant"
+                                                    ? (rating) => handleFeedback(msg.id, rating)
+                                                    : undefined
+                                            }
+                                            isSubmittingFeedback={feedbackLoading[msg.id]}
+                                        />
+                                    );
+                                })}
 
                                 {!isStreaming &&
                                     messages.length > 0 &&

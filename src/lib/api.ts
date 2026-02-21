@@ -187,19 +187,20 @@ export async function getHistory() {
 export async function getSessionMessagesAPI(id: string) {
     const res = await fetch(`/api/history/${id}`);
     return parseResponse<
-        { id: string; role: "user" | "assistant"; content: string; createdAt: string }[]
+        { id: string; role: "user" | "assistant"; content: string; metadata?: Record<string, unknown> | null; createdAt: string }[]
     >(res, "Failed to fetch session messages");
 }
 
 export async function saveMessageAPI(
     sessionId: string,
     role: "user" | "assistant",
-    content: string
+    content: string,
+    metadata?: Record<string, unknown> | null
 ) {
     const res = await fetch(`/api/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, role, content }),
+        body: JSON.stringify({ sessionId, role, content, metadata }),
     });
 
     return parseResponse(res, "Failed to save message");

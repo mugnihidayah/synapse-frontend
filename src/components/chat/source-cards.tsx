@@ -2,17 +2,26 @@
 
 import { useState } from "react";
 import { Source } from "@/types";
-import { ChevronDown, FileText } from "lucide-react";
+import { ChevronDown, FileText, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SourceViewer } from "./source-viewer";
 
 interface SourceCardsProps {
     sources: Source[];
+    query?: string;
 }
 
-export function SourceCards({ sources }: SourceCardsProps) {
+export function SourceCards({ sources, query = "" }: SourceCardsProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedSource, setSelectedSource] = useState<Source | null>(null);
+    const [viewerOpen, setViewerOpen] = useState(false);
 
     if (!sources || sources.length === 0) return null;
+
+    const handleCardClick = (source: Source) => {
+        setSelectedSource(source);
+        setViewerOpen(true);
+    };
 
     return (
         <div className="mt-3">
@@ -32,10 +41,14 @@ export function SourceCards({ sources }: SourceCardsProps) {
             {isOpen && (
                 <div className="mt-2 space-y-2">
                     {sources.map((source, i) => (
-                        <div key={i} className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                        <button
+                            key={i}
+                            onClick={() => handleCardClick(source)}
+                            className="w-full text-left rounded-lg border border-border/50 bg-muted/30 p-3 transition-colors hover:bg-muted/50 hover:border-border"
+                        >
                             <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
                                 <FileText className="h-3 w-3" />
-                                <span className="max-w-[60%] truncate">
+                                <span className="max-w-[50%] truncate">
                                     {source.source ||
                                         String(source.metadata?.source || "Unknown source")}
                                 </span>
@@ -45,23 +58,40 @@ export function SourceCards({ sources }: SourceCardsProps) {
                                     </span>
                                 )}
                                 {typeof source.score === "number" && (
-                                    <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400">
-                                        Score {source.score.toFixed(2)}
+                                    <span
+                                        className={cn(
+                                            "rounded px-1.5 py-0.5",
+                                            source.score >= 0.7
+                                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                                : source.score >= 0.4
+                                                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                        )}
+                                    >
+                                        {(source.score * 100).toFixed(0)}%
                                     </span>
                                 )}
+                                <ExternalLink className="ml-auto h-3 w-3 opacity-0 group-hover:opacity-100" />
                                 {source.chunk_id && (
-                                    <span className="ml-auto rounded bg-muted px-1.5 py-0.5 font-mono">
+                                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
                                         {source.chunk_id.slice(0, 8)}
                                     </span>
                                 )}
                             </div>
-                            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground/80">
+                            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground/80 line-clamp-2">
                                 {source.snippet || source.text}
                             </p>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
+
+            <SourceViewer
+                source={selectedSource}
+                query={query}
+                open={viewerOpen}
+                onOpenChange={setViewerOpen}
+            />
         </div>
     );
 }

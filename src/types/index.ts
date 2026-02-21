@@ -76,6 +76,7 @@ export interface Source {
     snippet?: string | null;
     score?: number;
     chunk_id?: string;
+    document_id?: string;
     source?: string | null;
     page?: number | null;
     metadata?: Record<string, unknown>;

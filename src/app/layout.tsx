@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
-    title: "Synapse - Advanced RAG Interface",
+    title: "Synapse | AI Document Intelligence",
     description: "Next-generation interface for RAG systems",
 };
 

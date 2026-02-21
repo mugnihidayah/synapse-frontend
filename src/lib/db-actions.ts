@@ -37,10 +37,15 @@ export async function getSessionMessages(chatId: string) {
     .orderBy(messages.createdAt);
 }
 
-export async function saveMessage(chatId: string, role: "user" | "assistant", content: string) {
+export async function saveMessage(
+  chatId: string,
+  role: "user" | "assistant",
+  content: string,
+  metadata?: Record<string, unknown> | null
+) {
   const [message] = await db
     .insert(messages)
-    .values({ chatId, role, content })
+    .values({ chatId, role, content, ...(metadata && { metadata }) })
     .returning();
     
   // Update chat updated_at
