@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChatMessage as ChatMessageType } from "@/types";
 import { cn } from "@/lib/utils";
-import { Bot, User, Copy, Check, Download } from "lucide-react";
+import { Bot, User, Copy, Check, Download, ThumbsUp, ThumbsDown } from "lucide-react";
 import { SourceCards } from "./source-cards";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,6 +15,8 @@ import "highlight.js/styles/github-dark.min.css";
 
 interface ChatMessageProps {
     message: ChatMessageType;
+    onFeedback?: (rating: -1 | 1) => void;
+    isSubmittingFeedback?: boolean;
 }
 
 function ThinkingDots() {
@@ -27,7 +29,11 @@ function ThinkingDots() {
     );
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({
+    message,
+    onFeedback,
+    isSubmittingFeedback,
+}: ChatMessageProps) {
     const isUser = message.role === "user";
     const [copied, setCopied] = useState(false);
 
@@ -80,6 +86,25 @@ export function ChatMessage({ message }: ChatMessageProps) {
                             minute: "2-digit",
                         }).format(new Date(message.timestamp))}
                     </span>
+                    {!isUser && message.model_used && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                            {message.model_used}
+                        </span>
+                    )}
+                    {!isUser && typeof message.grounded === "boolean" && (
+                        <span
+                            className={cn(
+                                "rounded px-1.5 py-0.5 text-[10px]",
+                                message.grounded
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                            )}
+                        >
+                            {message.grounded ? "Grounded" : "Low Grounding"}
+                            {typeof message.grounding_score === "number" &&
+                                ` ${message.grounding_score.toFixed(2)}`}
+                        </span>
+                    )}
                 </div>
 
                 {isThinking ? (
@@ -114,11 +139,62 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 )}
 
                 {message.sources && <SourceCards sources={message.sources} />}
+
+                {!isUser && message.rewritten_query && (
+                    <div className="rounded-md border border-border/50 bg-muted/20 p-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground/90">Rewritten query:</span>{" "}
+                        {message.rewritten_query}
+                    </div>
+                )}
+
+                {!isUser && message.debug && (
+                    <details className="rounded-md border border-border/50 bg-muted/20 p-2 text-xs text-muted-foreground">
+                        <summary className="cursor-pointer font-medium text-foreground/90">
+                            Retrieval debug
+                        </summary>
+                        <div className="mt-2 space-y-1">
+                            <p>Retrieved: {message.debug.retrieved_count}</p>
+                            <p>Reranked: {message.debug.reranked_count}</p>
+                            <p>Top K: {message.debug.top_k_used}</p>
+                            <p>Rerank Top K: {message.debug.rerank_top_k_used}</p>
+                        </div>
+                    </details>
+                )}
             </div>
 
             {/* Actions - only for assistant messages with content */}
             {!isUser && message.content && !message.isStreaming && (
                 <div className="absolute right-4 top-4 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    {onFeedback && (
+                        <>
+                            <button
+                                onClick={() => onFeedback(1)}
+                                disabled={!!isSubmittingFeedback}
+                                className={cn(
+                                    "rounded-md p-1.5 hover:bg-muted",
+                                    message.feedbackRating === 1
+                                        ? "text-emerald-500"
+                                        : "text-muted-foreground/50 hover:text-foreground"
+                                )}
+                                title="Helpful"
+                            >
+                                <ThumbsUp className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => onFeedback(-1)}
+                                disabled={!!isSubmittingFeedback}
+                                className={cn(
+                                    "rounded-md p-1.5 hover:bg-muted",
+                                    message.feedbackRating === -1
+                                        ? "text-rose-500"
+                                        : "text-muted-foreground/50 hover:text-foreground"
+                                )}
+                                title="Not helpful"
+                            >
+                                <ThumbsDown className="h-4 w-4" />
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={handleCopy}
                         className="rounded-md p-1.5 text-muted-foreground/50 hover:bg-muted hover:text-foreground"

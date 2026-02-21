@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("session_id");
+    const asyncMode = searchParams.get("async_mode");
+    const enableOcr = searchParams.get("enable_ocr");
+    const extractTables = searchParams.get("extract_tables");
 
     if (!sessionId) {
         return NextResponse.json(
@@ -21,13 +24,18 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    const backendUrl = new URL(`${API_URL}/api/v1/documents/upload/${sessionId}`);
+    if (asyncMode !== null) backendUrl.searchParams.set("async_mode", asyncMode);
+    if (enableOcr !== null) backendUrl.searchParams.set("enable_ocr", enableOcr);
+    if (extractTables !== null) backendUrl.searchParams.set("extract_tables", extractTables);
+
     // Pass the request stream directly to the backend to avoid buffering (Double Upload)
     // We must forward the Content-Type header which contains the boundary for multipart/form-data
     const contentType = request.headers.get("content-type");
 
     try {
         const res = await fetch(
-            `${API_URL}/api/v1/documents/upload/${sessionId}`,
+            backendUrl.toString(),
             {
                 method: "POST",
                 headers: {
