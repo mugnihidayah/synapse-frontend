@@ -349,7 +349,7 @@ export function AppSidebar({
                                     <input
                                         type="file"
                                         multiple
-                                        accept=".pdf,.txt,.docx,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
+                                        accept=".pdf,.txt,.docx,.md,.png,.jpg,.jpeg,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown,image/png,image/jpeg,image/webp"
                                         onChange={handleFileSelect}
                                         className="absolute inset-0 cursor-pointer opacity-0"
                                         disabled={isUploading}

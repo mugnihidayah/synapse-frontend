@@ -22,25 +22,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { question, language } = body;
+    const { question } = body;
 
     // 1. Save User Message
     if (question) {
         await saveMessage(sessionId, "user", question);
     }
 
-    // Inject language instruction into the question for the backend
-    const targetLanguage = language === "id" ? "Bahasa Indonesia" : "English";
-    
-    const prefix = `[SYSTEM: You MUST answer the following question in ${targetLanguage}. Ignore any other language instructions.]\n\nQuestion: `;
-    const suffix = `\n\n(Remember: Answer strictly in ${targetLanguage})`;
-    
-    // Create new body with modified question
-    const backendBody = {
-        ...body,
-        question: prefix + question + suffix
-    };
-
+    // Forward request directly to backend (language is handled via body.language)
     const res = await fetch(
         `${API_URL}/api/v1/query/stream/${sessionId}`,
         {
@@ -49,7 +38,7 @@ export async function POST(request: NextRequest) {
                 "Content-Type": "application/json",
                 "X-API-Key": API_KEY!,
             },
-            body: JSON.stringify(backendBody),
+            body: JSON.stringify(body),
         }
     );
 
