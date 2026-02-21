@@ -281,173 +281,192 @@ export function AppSidebar({
 
                 <Separator className="my-2" />
 
-                {/* Upload Area - Only show if active session exists */}
-                {currentSessionId && (
+                {/* Upload Area */}
+                {userId && (
                     <div className="p-4">
-                        <div className="mb-3 rounded-md border border-border/40 bg-muted/20 p-2 text-xs">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Ingestion</span>
-                                <span
+                        {!currentSessionId ? (
+                            <div className="rounded-md border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
+                                <p>No active session yet.</p>
+                                <Button
+                                    size="sm"
+                                    className="mt-2 h-7 text-xs"
+                                    onClick={onNewSession}
+                                >
+                                    Create Session
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mb-3 rounded-md border border-border/40 bg-muted/20 p-2 text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Ingestion</span>
+                                        <span
+                                            className={cn(
+                                                "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                                                ingestionStatus === "ready" &&
+                                                    "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                                                ingestionStatus === "failed" &&
+                                                    "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+                                                (ingestionStatus === "queued" ||
+                                                    ingestionStatus === "processing") &&
+                                                    "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                                                ingestionStatus === "idle" &&
+                                                    "bg-muted text-muted-foreground"
+                                            )}
+                                        >
+                                            {ingestionStatus}
+                                        </span>
+                                    </div>
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                        Docs: {sessionInfo?.document_count ?? uploadedFiles.length}
+                                    </p>
+                                    {sessionInfo?.ingestion_error && (
+                                        <p className="mt-1 text-[11px] text-destructive">
+                                            {sessionInfo.ingestion_error}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
                                     className={cn(
-                                        "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                                        ingestionStatus === "ready" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-                                        ingestionStatus === "failed" && "bg-rose-500/15 text-rose-600 dark:text-rose-400",
-                                        (ingestionStatus === "queued" || ingestionStatus === "processing") &&
-                                            "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-                                        ingestionStatus === "idle" && "bg-muted text-muted-foreground"
+                                        "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
+                                        isDragging
+                                            ? "border-primary bg-primary/10"
+                                            : "border-muted-foreground/25 hover:border-muted-foreground/50"
                                     )}
                                 >
-                                    {ingestionStatus}
-                                </span>
-                            </div>
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                                Docs: {sessionInfo?.document_count ?? uploadedFiles.length}
-                            </p>
-                            {sessionInfo?.ingestion_error && (
-                                <p className="mt-1 text-[11px] text-destructive">
-                                    {sessionInfo.ingestion_error}
-                                </p>
-                            )}
-                        </div>
+                                    {isUploading ? (
+                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                    ) : (
+                                        <Upload className="h-8 w-8 text-muted-foreground" />
+                                    )}
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        {isUploading ? "Processing..." : "Drop files here"}
+                                    </p>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept=".pdf,.txt,.docx,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
+                                        onChange={handleFileSelect}
+                                        className="absolute inset-0 cursor-pointer opacity-0"
+                                        disabled={isUploading}
+                                    />
+                                </div>
+                                {formatsText && (
+                                    <p className="mt-2 text-[11px] text-muted-foreground">
+                                        Supported: {formatsText}
+                                    </p>
+                                )}
 
-                        <div
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            className={cn(
-                                "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
-                                isDragging
-                                    ? "border-primary bg-primary/10"
-                                    : "border-muted-foreground/25 hover:border-muted-foreground/50"
-                            )}
-                        >
-                            {isUploading ? (
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            ) : (
-                                <Upload className="h-8 w-8 text-muted-foreground" />
-                            )}
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                {isUploading ? "Processing..." : "Drop files here"}
-                            </p>
-                            <input
-                                type="file"
-                                multiple
-                                accept=".pdf,.txt,.docx,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
-                                onChange={handleFileSelect}
-                                className="absolute inset-0 cursor-pointer opacity-0"
-                                disabled={isUploading}
-                            />
-                        </div>
-                        {formatsText && (
-                            <p className="mt-2 text-[11px] text-muted-foreground">
-                                Supported: {formatsText}
-                            </p>
-                        )}
+                                {/* Uploaded Files */}
+                                {uploadedFiles.length > 0 && (
+                                     <div className="mt-4 space-y-2">
+                                        <p className="text-xs font-medium text-muted-foreground">
+                                            DOCUMENTS ({uploadedFiles.length})
+                                        </p>
+                                        {uploadedFiles.map((file, i) => {
+                                            const Icon = getFileIcon(file);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-muted/30"
+                                                >
+                                                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                    <span className="truncate flex-1">{file}</span>
+                                                    <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                        {/* Uploaded Files */}
-                        {uploadedFiles.length > 0 && (
-                             <div className="mt-4 space-y-2">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    DOCUMENTS ({uploadedFiles.length})
-                                </p>
-                                {uploadedFiles.map((file, i) => {
-                                    const Icon = getFileIcon(file);
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-muted/30"
+                                <div className="mt-4 space-y-2 rounded-md border border-border/40 p-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <p className="font-medium text-foreground">Document Chunks</p>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6"
+                                            onClick={refreshDocuments}
                                         >
-                                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                            <span className="truncate flex-1">{file}</span>
-                                            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
+                                            <RefreshCw className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Input
+                                            value={docSearch}
+                                            onChange={(e) => {
+                                                setDocPage(1);
+                                                setDocSearch(e.target.value);
+                                            }}
+                                            className="h-7 text-xs"
+                                            placeholder="Search..."
+                                        />
+                                        <Input
+                                            value={docSource}
+                                            onChange={(e) => {
+                                                setDocPage(1);
+                                                setDocSource(e.target.value);
+                                            }}
+                                            className="h-7 text-xs"
+                                            placeholder="Source file..."
+                                        />
+                                    </div>
+                                    {isDocsLoading ? (
+                                        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Loading chunks...
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    ) : documents.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">No chunks found</p>
+                                    ) : (
+                                        <div className="max-h-44 space-y-1 overflow-y-auto">
+                                            {documents.map((doc) => (
+                                                <div key={doc.chunk_id} className="rounded border border-border/40 p-2">
+                                                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                                        <span className="truncate">{doc.source || "Unknown source"}</span>
+                                                        {typeof doc.page === "number" && (
+                                                            <span>p.{doc.page}</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
+                                                        {doc.preview}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between text-[11px]">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-[11px]"
+                                            disabled={docPage <= 1}
+                                            onClick={() => setDocPage((prev) => Math.max(1, prev - 1))}
+                                        >
+                                            Prev
+                                        </Button>
+                                        <span className="text-muted-foreground">
+                                            Page {docPage}/{totalDocPages}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-[11px]"
+                                            disabled={docPage >= totalDocPages}
+                                            onClick={() =>
+                                                setDocPage((prev) => Math.min(totalDocPages, prev + 1))
+                                            }
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
                         )}
-
-                        <div className="mt-4 space-y-2 rounded-md border border-border/40 p-2">
-                            <div className="flex items-center justify-between text-xs">
-                                <p className="font-medium text-foreground">Document Chunks</p>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6"
-                                    onClick={refreshDocuments}
-                                >
-                                    <RefreshCw className="h-3 w-3" />
-                                </Button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Input
-                                    value={docSearch}
-                                    onChange={(e) => {
-                                        setDocPage(1);
-                                        setDocSearch(e.target.value);
-                                    }}
-                                    className="h-7 text-xs"
-                                    placeholder="Search..."
-                                />
-                                <Input
-                                    value={docSource}
-                                    onChange={(e) => {
-                                        setDocPage(1);
-                                        setDocSource(e.target.value);
-                                    }}
-                                    className="h-7 text-xs"
-                                    placeholder="Source file..."
-                                />
-                            </div>
-                            {isDocsLoading ? (
-                                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    Loading chunks...
-                                </div>
-                            ) : documents.length === 0 ? (
-                                <p className="text-xs text-muted-foreground">No chunks found</p>
-                            ) : (
-                                <div className="max-h-44 space-y-1 overflow-y-auto">
-                                    {documents.map((doc) => (
-                                        <div key={doc.chunk_id} className="rounded border border-border/40 p-2">
-                                            <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                                                <span className="truncate">{doc.source || "Unknown source"}</span>
-                                                {typeof doc.page === "number" && (
-                                                    <span>p.{doc.page}</span>
-                                                )}
-                                            </div>
-                                            <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
-                                                {doc.preview}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <div className="flex items-center justify-between text-[11px]">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-[11px]"
-                                    disabled={docPage <= 1}
-                                    onClick={() => setDocPage((prev) => Math.max(1, prev - 1))}
-                                >
-                                    Prev
-                                </Button>
-                                <span className="text-muted-foreground">
-                                    Page {docPage}/{totalDocPages}
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-[11px]"
-                                    disabled={docPage >= totalDocPages}
-                                    onClick={() =>
-                                        setDocPage((prev) => Math.min(totalDocPages, prev + 1))
-                                    }
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>
