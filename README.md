@@ -1,111 +1,167 @@
-# Synapse - Advanced RAG Interface
+﻿# Synapse Frontend
 
-Synapse is a next-generation chat interface for Retrieval-Augmented Generation (RAG) systems. Built with modern web technologies, it provides a seamless, production-grade experience for interacting with AI models and documents.
+Synapse is a modern Retrieval-Augmented Generation (RAG) document Q&A interface.
+Users upload documents, ask questions, and receive AI answers with source citations.
 
-> **Note**: This is the frontend interface for the [Synapse Instant Document Insight](https://github.com/mugnihidayah/synapse-instant-document-insight) backend project.
+This repository is the frontend app. It proxies requests to the backend service:
+[synapse-instant-document-insight](https://github.com/mugnihidayah/synapse-instant-document-insight).
 
-![Synapse UI](/public/synapse-preview.png)
+![Synapse UI](./public/synapse-preview.png)
 
-## 🚀 Key Features
+## What You Get
 
-### 🧠 Advanced AI Interaction
-- **Real-time Streaming**: Fluid response generation with "Thinking" indicators.
-- **RAG Capabilities**: Upload documents (PDF, DOCX, TXT) and chat with them.
-- **Model Control**: Customize Model (Llama-3, etc.), Temperature, and Output Language.
+- Clerk authentication with a polished landing experience for signed-out users
+- Session-based chat history (create, switch, delete sessions)
+- Document upload with real upload progress (`uploading -> processing -> done/error`)
+- OCR-aware ingestion status, including warning handling (for example image with no readable text)
+- Streaming answers over SSE
+- Source citations with side viewer and PDF preview
+- Feedback and usage insights integration
+- Settings panel: theme, language (EN/ID), model, temperature, OCR/table options
 
-### 🔐 Secure & Persistent
-- **Fullstack Auth**: Secure authentication via **Clerk** (Sign In, Sign Up, User Profile).
-- **Cloud Database**: Chat history and user preferences persisted in **Neon (PostgreSQL)** via **Drizzle ORM**.
-- **Session Management**: Create, delete, and switch between multiple chat sessions securely.
+## Tech Stack
 
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS v4 + shadcn/ui
+- Clerk (auth)
+- Drizzle ORM + Postgres (Neon compatible)
+- Lucide React + Sonner
 
+## Architecture Summary
 
-## 🛠️ Tech Stack
+- `src/app/api/*` acts as a secure proxy between frontend and backend API
+- Backend API key is stored server-side (`API_KEY`) and never exposed to browser
+- User/session/message metadata is persisted in Postgres via Drizzle
+- Chat responses are streamed from backend through `/api/query-stream`
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn/UI](https://ui.shadcn.com/)
-- **Database**: [Neon](https://neon.tech/) (Serverless Postgres)
-- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
-- **Auth**: [Clerk](https://clerk.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
+## Prerequisites
 
-## ⚡ Getting Started
-
-### Prerequisites
-- Node.js 18+
-- A Neon Database project
+- Node.js 20+
+- A Postgres database URL
 - A Clerk application
-- A running Python RAG Backend (compatible API)
+- Running Synapse backend API
 
-### 1. Clone & Install
-```bash
-git clone https://github.com/yourusername/synapse-frontend.git
-cd synapse-frontend
-npm install
-```
+## Environment Variables
 
-### 2. Environment Variables
-Create a `.env.local` file in the root directory:
+Create `.env.local` in project root:
 
 ```env
-# Database (Neon)
-DATABASE_URL="postgresql://user:password@ep-xyz.region.aws.neon.tech/synapse?sslmode=require"
+# Database
+DATABASE_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
 
-# Authentication (Clerk)
+# Clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
 
-# Backend API (Python RAG Service)
+# Backend service
 API_URL="http://localhost:8000"
 API_KEY="your-backend-api-key"
 ```
 
-### 3. Database Setup
-Push the schema to your Neon database:
+## Local Development
+
+1. Install dependencies
 
 ```bash
-npm run db:push
+npm install
 ```
 
-### 4. Run Development Server
+2. Push Drizzle schema to database
+
+```bash
+npx drizzle-kit push
+```
+
+3. Start development server
+
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to start chatting.
+Open `http://localhost:3000`.
 
-## 📂 Project Structure
+## Available Scripts
 
+```bash
+npm run dev      # start dev server
+npm run build    # production build
+npm run start    # start production server
+npm run lint     # run eslint
 ```
+
+## Backend API Contract (Core)
+
+The frontend expects these backend endpoints (under `API_URL`):
+
+- `POST /api/v1/documents/sessions`
+- `GET /api/v1/documents/sessions/{id}`
+- `DELETE /api/v1/documents/sessions/{id}`
+- `POST /api/v1/documents/upload/{session_id}`
+- `POST /api/v1/query/{session_id}`
+- `POST /api/v1/query/stream/{session_id}`
+- `GET /api/v1/documents/supported-formats`
+- `GET /api/v1/documents/{document_id}/file`
+
+Additional insights/keys endpoints are used by the UI (`/api/v1/insights/*`, `/api/v1/keys/*`).
+
+## Project Structure
+
+```text
 src/
-├── app/              # Next.js App Router pages & API routes
-│   ├── api/          # Backend API (Sessions, Messages, Upload)
-│   ├── layout.tsx    # Root layout with Providers
-│   └── page.tsx      # Main Chat Interface
-├── components/       # React Components
-│   ├── chat/         # Chat bubbles, Input, etc.
-│   ├── sidebar/      # App Sidebar, History, Settings
-│   └── ui/           # Shadcn UI primitives
-├── db/               # Database Configuration
-│   ├── schema.ts     # Drizzle Schema (Users, Chats, Messages)
-│   └── index.ts      # DB Connection
-├── lib/              # Utilities & API Clients
-│   ├── api.ts        # Frontend API definitions
-│   └── db-actions.ts # Server-side DB operations
-└── types/            # TypeScript Interfaces
+  app/
+    home-client.tsx
+    api/
+      query-stream/
+      upload/
+      sessions/
+      messages/
+      history/
+      documents/[id]/file/
+      insights/
+      keys/
+  components/
+    landing/
+    chat/
+    sidebar/
+    ui/
+  db/
+    schema.ts
+    index.ts
+  lib/
+    api.ts
+    db-actions.ts
+    ingestion-error.ts
+  types/
+    index.ts
 ```
 
-## 🚀 Deployment
+## Troubleshooting
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmugnihidayah%2Fsynapse-frontend&env=DATABASE_URL,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,CLERK_SECRET_KEY,API_URL,API_KEY)
+- Upload shows warning like "No readable text"
+  - This usually means OCR could not find text in an image.
+  - It is treated as warning when possible; upload can still complete for valid files.
 
-Remember to add your **Neon Database URL**, **Clerk Keys**, and **Backend API URL** in the Vercel Project Settings.
+- `401 Unauthorized`
+  - Check Clerk keys and login state.
 
-## 🤝 Contributing
+- Upload/query fails with backend error
+  - Verify `API_URL` and `API_KEY` in `.env.local`.
+  - Ensure backend is running and reachable from Next.js server.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- Database errors on session/history
+  - Verify `DATABASE_URL`.
+  - Run `npx drizzle-kit push` again.
 
-## 📄 License
+## Deployment Notes
 
-This project is licensed under the MIT License.
+Deploy on Vercel (or similar) and set all environment variables from `.env.local`.
+
+Recommended checks before deploy:
+
+1. `npm run lint`
+2. `npm run build`
+
+## License
+
+MIT

@@ -37,17 +37,17 @@ export function ChatInput({ onSend, disabled, isStreaming, onStop }: ChatInputPr
     };
 
     return (
-        <form onSubmit={handleSubmit} className="border-t border-border p-4">
-            <div className="flex items-end gap-2">
+        <form onSubmit={handleSubmit} className="border-t border-border px-3 py-3 sm:p-4">
+            <div className="flex items-end gap-2 sm:gap-2.5">
                 <textarea
                     ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask about your documents..."
-                    disabled={disabled && !isStreaming} // Allow typing if not strictly disabled? No, kept disabled during stream for now
+                    disabled={disabled && !isStreaming}
                     rows={1}
-                    className="flex-1 resize-none rounded-lg border border-input bg-background px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="min-h-11 flex-1 resize-none rounded-lg border border-input bg-background px-3.5 py-3 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 sm:text-sm"
                 />
                 {isStreaming ? (
                     <Button

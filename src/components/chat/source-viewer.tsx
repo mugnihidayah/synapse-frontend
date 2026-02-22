@@ -127,7 +127,7 @@ function TextViewer({ source, keywords }: { source: Source; keywords: string[] }
                 </p>
             )}
             <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-                <p className="text-sm leading-7 text-foreground/90 whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap break-words text-sm leading-7 text-foreground/90">
                     {segments.map((segment, i) => (
                         <Fragment key={i}>
                             {segment.highlighted ? (
@@ -172,7 +172,7 @@ export function SourceViewer({ source, query, open, onOpenChange }: SourceViewer
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full sm:max-w-xl flex flex-col gap-0 p-0"
+                className="flex w-full max-w-full flex-col gap-0 p-0 sm:max-w-xl"
             >
                 {/* Header */}
                 <SheetHeader className="border-b border-border/50 p-4 space-y-3">
@@ -208,7 +208,7 @@ export function SourceViewer({ source, query, open, onOpenChange }: SourceViewer
                             <button
                                 onClick={() => setActiveTab("document")}
                                 className={cn(
-                                    "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                                    "h-11 flex-1 rounded-md px-3 text-xs font-medium transition-colors",
                                     activeTab === "document"
                                         ? "bg-background shadow-sm text-foreground"
                                         : "text-muted-foreground hover:text-foreground"
@@ -219,7 +219,7 @@ export function SourceViewer({ source, query, open, onOpenChange }: SourceViewer
                             <button
                                 onClick={() => setActiveTab("text")}
                                 className={cn(
-                                    "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                                    "h-11 flex-1 rounded-md px-3 text-xs font-medium transition-colors",
                                     activeTab === "text"
                                         ? "bg-background shadow-sm text-foreground"
                                         : "text-muted-foreground hover:text-foreground"
@@ -232,7 +232,7 @@ export function SourceViewer({ source, query, open, onOpenChange }: SourceViewer
                 </SheetHeader>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4">
                     {canShowPdf && activeTab === "document" ? (
                         <PdfViewer
                             documentId={source.document_id!}

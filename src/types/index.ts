@@ -3,13 +3,53 @@ export interface SessionCreate {
     message: string;
 }
 
+export type IngestionSeverity = "warning" | "error";
+export type IngestionFileStatus = "processed" | "warning" | "failed";
+
+export interface IngestionSummary {
+    total_files?: number;
+    processed_files?: number;
+    warning_files?: number;
+    failed_files?: number;
+}
+
+export interface IngestionFileResult {
+    filename: string;
+    mime_type?: string | null;
+    status: IngestionFileStatus | string;
+    error_code?: string | null;
+    severity?: IngestionSeverity | string | null;
+    message?: string | null;
+    document_id?: string | null;
+    chunks_created?: number | null;
+}
+
+export interface IngestionWarning {
+    filename?: string | null;
+    error_code?: string | null;
+    severity?: IngestionSeverity | string | null;
+    message?: string | null;
+}
+
 export interface SessionInfo {
     session_id: string;
     created_at: string;
     document_count: number;
     is_ready: boolean;
-    ingestion_status?: "idle" | "queued" | "processing" | "ready" | "failed" | string;
+    ingestion_status?:
+        | "idle"
+        | "queued"
+        | "processing"
+        | "ready"
+        | "ready_with_warnings"
+        | "failed"
+        | string;
     ingestion_error?: string | null;
+    ingestion_error_code?: string | null;
+    ingestion_error_severity?: IngestionSeverity | string | null;
+    ingestion_summary?: IngestionSummary | null;
+    ingestion_warnings?: IngestionWarning[] | null;
+    file_results?: IngestionFileResult[] | null;
     ingestion_started_at?: string | null;
     ingestion_completed_at?: string | null;
 }
@@ -21,6 +61,10 @@ export interface DocumentUploadResponse {
     files_queued?: number;
     ingestion_status?: string;
     message: string;
+    error_code?: string | null;
+    severity?: IngestionSeverity | string | null;
+    summary?: IngestionSummary | null;
+    file_results?: IngestionFileResult[] | null;
 }
 
 export interface SessionDocumentItem {
@@ -176,6 +220,21 @@ export interface AppSettings {
     async_mode: boolean;
     enable_ocr: boolean;
     extract_tables: boolean;
+}
+
+export type UploadProgressStatus =
+    | "idle"
+    | "uploading"
+    | "processing"
+    | "done"
+    | "error";
+
+export interface UploadProgress {
+    status: UploadProgressStatus;
+    percent: number;
+    fileName: string;
+    error?: string;
+    files?: string[];
 }
 
 export interface ChatSession {

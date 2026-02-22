@@ -9,15 +9,17 @@ import {
     Plus,
     Loader2,
     CheckCircle2,
+    AlertCircle,
     Trash2,
     MessageSquare,
     FileCode,
     FileImage,
     LogIn,
 } from "lucide-react";
+import { formatIngestionError } from "@/lib/ingestion-error";
 import { cn } from "@/lib/utils";
 import { SettingsPanel } from "./settings-panel";
-import { AppSettings, ChatSession, SessionInfo } from "@/types";
+import { AppSettings, ChatSession, SessionInfo, UploadProgress } from "@/types";
 import { UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { getSupportedFormatsAPI } from "@/lib/api";
 
@@ -29,7 +31,8 @@ interface AppSidebarProps {
     sessions: ChatSession[];
     currentSessionId: string | null;
     uploadedFiles: string[];
-    isUploading: boolean;
+    uploadProgress: UploadProgress;
+    onRetryUpload: () => void;
     settings: AppSettings;
     onSettingsChange: (settings: AppSettings) => void;
     sessionInfo?: SessionInfo | null;
@@ -43,7 +46,8 @@ export function AppSidebar({
     sessions,
     currentSessionId,
     uploadedFiles,
-    isUploading,
+    uploadProgress,
+    onRetryUpload,
     settings,
     onSettingsChange,
     sessionInfo,
@@ -107,13 +111,39 @@ export function AppSidebar({
 
     const ingestionStatus =
         sessionInfo?.ingestion_status || (sessionInfo?.is_ready ? "ready" : "idle");
+    const ingestionErrorInfo = formatIngestionError(sessionInfo);
+    const hasIngestionWarning =
+        ingestionStatus === "ready_with_warnings" || ingestionErrorInfo.severity === "warning";
+    const hasIngestionIssueData =
+        !!sessionInfo?.ingestion_error ||
+        !!sessionInfo?.ingestion_error_code ||
+        (sessionInfo?.ingestion_warnings?.length ?? 0) > 0 ||
+        (sessionInfo?.file_results?.length ?? 0) > 0;
+    const shouldShowIngestionDetails =
+        (ingestionStatus === "failed" || ingestionStatus === "ready_with_warnings") &&
+        hasIngestionIssueData;
+    const isUploadLocked =
+        uploadProgress.status === "uploading" || uploadProgress.status === "processing";
+
+    const uploadLabel =
+        uploadProgress.status === "uploading"
+            ? "Uploading..."
+            : uploadProgress.status === "processing"
+              ? "Processing..."
+              : "Drop files here";
 
     return (
         <div className="flex h-full w-72 shrink-0 flex-col border-r border-border/40 bg-card/50 backdrop-blur-xl">
             {/* Header */}
             <div className="flex items-center justify-between p-4">
                 <h2 className="text-lg font-semibold">Synapse</h2>
-                <Button variant="ghost" size="icon" onClick={onNewSession} title="New Chat">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onNewSession}
+                    title="New Chat"
+                    className="h-10 w-10"
+                >
                     <Plus className="h-4 w-4" />
                 </Button>
             </div>
@@ -135,6 +165,7 @@ export function AppSidebar({
                                 onClick={() => onSelectSession(session)}
                                 className={cn(
                                     "group flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer",
+                                    "min-h-11",
                                     currentSessionId === session.id &&
                                         "bg-muted text-foreground font-medium"
                                 )}
@@ -146,7 +177,7 @@ export function AppSidebar({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                                    className="h-8 w-8 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                     onClick={(e) => onDeleteSession(session.id, e)}
                                 >
                                     <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
@@ -183,8 +214,12 @@ export function AppSidebar({
                                                 "rounded px-1.5 py-0.5 text-[10px] font-medium",
                                                 ingestionStatus === "ready" &&
                                                     "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                                                ingestionStatus === "ready_with_warnings" &&
+                                                    "bg-amber-500/15 text-amber-600 dark:text-amber-400",
                                                 ingestionStatus === "failed" &&
-                                                    "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+                                                    (hasIngestionWarning
+                                                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                                        : "bg-rose-500/15 text-rose-600 dark:text-rose-400"),
                                                 (ingestionStatus === "queued" ||
                                                     ingestionStatus === "processing") &&
                                                     "bg-amber-500/15 text-amber-600 dark:text-amber-400",
@@ -198,10 +233,26 @@ export function AppSidebar({
                                     <p className="mt-1 text-[11px] text-muted-foreground">
                                         Docs: {sessionInfo?.document_count ?? uploadedFiles.length}
                                     </p>
-                                    {sessionInfo?.ingestion_error && (
-                                        <p className="mt-1 text-[11px] text-destructive">
-                                            {sessionInfo.ingestion_error}
-                                        </p>
+                                    {shouldShowIngestionDetails && (
+                                        <div className="mt-1 space-y-1 text-[11px]">
+                                            <p
+                                                className={cn(
+                                                    hasIngestionWarning
+                                                        ? "text-amber-600 dark:text-amber-400"
+                                                        : "text-destructive"
+                                                )}
+                                            >
+                                                {ingestionErrorInfo.title}
+                                            </p>
+                                            <p className="text-muted-foreground break-words">
+                                                {ingestionErrorInfo.description}
+                                            </p>
+                                            {ingestionErrorInfo.hint && (
+                                                <p className="text-muted-foreground">
+                                                    {ingestionErrorInfo.hint}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
@@ -211,27 +262,86 @@ export function AppSidebar({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                     className={cn(
-                                        "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
+                                        "relative flex min-h-40 flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
                                         isDragging
                                             ? "border-primary bg-primary/10"
-                                            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                                            : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                                        isUploadLocked && "pointer-events-none opacity-90"
                                     )}
                                 >
-                                    {isUploading ? (
+                                    {isUploadLocked ? (
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                     ) : (
                                         <Upload className="h-8 w-8 text-muted-foreground" />
                                     )}
                                     <p className="mt-2 text-sm text-muted-foreground">
-                                        {isUploading ? "Processing..." : "Drop files here"}
+                                        {uploadLabel}
                                     </p>
+                                    <p className="mt-1 text-center text-[11px] text-muted-foreground">
+                                        Tap to browse or drag and drop files
+                                    </p>
+
+                                    {uploadProgress.status !== "idle" && (
+                                        <div className="mt-4 w-full rounded-md border border-border/50 bg-background/60 p-3 text-xs">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="truncate text-muted-foreground">
+                                                    {uploadProgress.fileName || "Uploading files"}
+                                                </span>
+                                                {uploadProgress.status === "uploading" && (
+                                                    <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                                                        {uploadProgress.percent}%
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {uploadProgress.status === "uploading" && (
+                                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                                    <div
+                                                        className="h-full rounded-full bg-emerald-500 transition-[width] duration-200"
+                                                        style={{ width: `${uploadProgress.percent}%` }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {uploadProgress.status === "processing" && (
+                                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                                    <div className="h-full w-1/2 animate-pulse rounded-full bg-amber-500" />
+                                                </div>
+                                            )}
+
+                                            {uploadProgress.status === "done" && (
+                                                <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+                                                    Upload complete. Processing started.
+                                                </p>
+                                            )}
+
+                                            {uploadProgress.status === "error" && (
+                                                <div className="mt-2 flex items-center justify-between gap-2">
+                                                    <p className="flex min-w-0 items-center gap-1 truncate text-[11px] text-destructive">
+                                                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                                        {uploadProgress.error || "Upload failed"}
+                                                    </p>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-8 min-h-8 px-2 text-[11px]"
+                                                        onClick={onRetryUpload}
+                                                    >
+                                                        Retry
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <input
                                         type="file"
                                         multiple
                                         accept=".pdf,.txt,.docx,.md,.png,.jpg,.jpeg,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown,image/png,image/jpeg,image/webp"
                                         onChange={handleFileSelect}
                                         className="absolute inset-0 cursor-pointer opacity-0"
-                                        disabled={isUploading}
+                                        disabled={isUploadLocked}
                                     />
                                 </div>
                                 {formatsText && (

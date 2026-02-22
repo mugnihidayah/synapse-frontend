@@ -83,7 +83,8 @@ interface UploadOptions {
 export async function uploadFiles(
     sessionId: string,
     files: File[],
-    options?: UploadOptions
+    options?: UploadOptions,
+    onProgress?: (percent: number) => void
 ): Promise<DocumentUploadResponse> {
     const formData = new FormData();
     files.forEach((file) => {
@@ -105,16 +106,56 @@ export async function uploadFiles(
         url.searchParams.set("extract_tables", String(options.extract_tables));
     }
 
-    const res = await fetch(url.pathname + url.search, {
-        method: "POST",
-        body: formData,
-        headers: {
-            "x-file-names": encodeURIComponent(fileNames),
-            "x-file-types": encodeURIComponent(fileTypes),
-        },
-    });
+    return new Promise<DocumentUploadResponse>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url.pathname + url.search, true);
+        xhr.setRequestHeader("x-file-names", encodeURIComponent(fileNames));
+        xhr.setRequestHeader("x-file-types", encodeURIComponent(fileTypes));
 
-    return parseResponse<DocumentUploadResponse>(res, "Upload failed");
+        onProgress?.(0);
+
+        xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable || !onProgress) return;
+            const percent = Math.max(
+                0,
+                Math.min(99, Math.round((event.loaded / event.total) * 100))
+            );
+            onProgress(percent);
+        };
+
+        xhr.onload = () => {
+            onProgress?.(100);
+
+            const contentType = xhr.getResponseHeader("content-type") || "";
+            const rawText = xhr.responseText || "";
+            const isJson = contentType.includes("application/json");
+            let payload: unknown = rawText;
+            if (isJson && rawText) {
+                try {
+                    payload = JSON.parse(rawText);
+                } catch {
+                    payload = rawText;
+                }
+            }
+
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(new ApiError(pickErrorMessage(payload, "Upload failed"), xhr.status, payload));
+                return;
+            }
+
+            resolve(payload as DocumentUploadResponse);
+        };
+
+        xhr.onerror = () => {
+            reject(new ApiError("Upload failed", xhr.status || 0));
+        };
+
+        xhr.onabort = () => {
+            reject(new ApiError("Upload canceled", xhr.status || 0));
+        };
+
+        xhr.send(formData);
+    });
 }
 
 export async function getSessionDocumentsAPI(

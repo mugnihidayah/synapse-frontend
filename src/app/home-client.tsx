@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
+import { EmptyState } from "@/components/chat/empty-state";
+import { MessageSkeleton } from "@/components/chat/message-skeleton";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { HeroSection } from "@/components/landing/hero-section";
 import {
     ApiError,
     createSession,
@@ -21,16 +24,21 @@ import {
     uploadFiles,
 } from "@/lib/api";
 import {
+    formatIngestionDescription,
+    formatIngestionError,
+} from "@/lib/ingestion-error";
+import {
     AppSettings,
     ChatMessage as ChatMessageType,
     ChatSession,
     QueryFilters,
     SessionInfo,
+    UploadProgress,
     UsageResponse,
 } from "@/types";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Loader2, RefreshCw, RotateCcw, LogIn, AlertTriangle } from "lucide-react";
+import { Menu, Loader2, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, useClerk, UserButton } from "@clerk/nextjs";
 
@@ -66,6 +74,12 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 const PENDING_INGESTION = new Set(["queued", "processing"]);
 const BLOCKED_INGESTION = new Set(["queued", "processing", "failed"]);
+const IDLE_UPLOAD_PROGRESS: UploadProgress = {
+    status: "idle",
+    percent: 0,
+    fileName: "",
+    files: [],
+};
 
 interface DBMessage {
     id: string;
@@ -97,10 +111,12 @@ export default function HomeClient() {
     const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
 
-    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<UploadProgress>(IDLE_UPLOAD_PROGRESS);
+    const [pendingUploadFiles, setPendingUploadFiles] = useState<File[] | null>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [isSessionReady, setIsSessionReady] = useState(false);
     const [isSessionLoading, setIsSessionLoading] = useState(false);
+    const [isSwitchingSession, setIsSwitchingSession] = useState(false);
     const [sessionError, setSessionError] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -147,15 +163,20 @@ export default function HomeClient() {
             setMessages([]);
             setUploadedFiles([]);
             setSessionInfo(null);
+            setUploadProgress(IDLE_UPLOAD_PROGRESS);
+            setPendingUploadFiles(null);
             return;
         }
 
         setIsSessionLoading(true);
+        setIsSwitchingSession(false);
         setSessionError(false);
         setMessages([]);
         setUploadedFiles([]);
         setSessionId(null);
         setSessionInfo(null);
+        setUploadProgress(IDLE_UPLOAD_PROGRESS);
+        setPendingUploadFiles(null);
 
         try {
             const session = await createSession();
@@ -283,6 +304,8 @@ export default function HomeClient() {
             setSessionError(false);
             setSessionInfo(null);
             setUsageInfo(null);
+            setUploadProgress(IDLE_UPLOAD_PROGRESS);
+            setPendingUploadFiles(null);
             setSettings(DEFAULT_SETTINGS);
             initialized.current = false;
             wasLoggedIn.current = false;
@@ -300,6 +323,75 @@ export default function HomeClient() {
         return () => clearInterval(timer);
     }, [refreshSessionInfo, sessionId, sessionInfo?.ingestion_status, userId]);
 
+    useEffect(() => {
+        if (uploadProgress.status !== "processing") return;
+
+        if (
+            sessionInfo?.ingestion_status === "ready" ||
+            sessionInfo?.ingestion_status === "ready_with_warnings"
+        ) {
+            setUploadProgress((prev) => ({
+                ...prev,
+                status: "done",
+                percent: 100,
+                error: undefined,
+            }));
+            return;
+        }
+
+        if (sessionInfo?.ingestion_status === "failed") {
+            const ingestionInfo = formatIngestionError({
+                ingestion_error: sessionInfo?.ingestion_error,
+                ingestion_error_code: sessionInfo?.ingestion_error_code,
+                ingestion_error_severity: sessionInfo?.ingestion_error_severity,
+                ingestion_warnings: sessionInfo?.ingestion_warnings,
+                file_results: sessionInfo?.file_results,
+            });
+
+            if (ingestionInfo.severity === "warning") {
+                // A warning-only ingestion result should not keep upload progress in retry state.
+                setUploadProgress((prev) => ({
+                    ...prev,
+                    status: "done",
+                    percent: 100,
+                    error: undefined,
+                }));
+                return;
+            }
+
+            const description = formatIngestionDescription({
+                ingestion_error: sessionInfo?.ingestion_error,
+                ingestion_error_code: sessionInfo?.ingestion_error_code,
+                ingestion_error_severity: sessionInfo?.ingestion_error_severity,
+                ingestion_warnings: sessionInfo?.ingestion_warnings,
+                file_results: sessionInfo?.file_results,
+            });
+            setUploadProgress((prev) => ({
+                ...prev,
+                status: "error",
+                error: description,
+            }));
+        }
+    }, [
+        sessionInfo?.file_results,
+        sessionInfo?.ingestion_error,
+        sessionInfo?.ingestion_error_code,
+        sessionInfo?.ingestion_error_severity,
+        sessionInfo?.ingestion_status,
+        sessionInfo?.ingestion_warnings,
+        uploadProgress.status,
+    ]);
+
+    useEffect(() => {
+        if (uploadProgress.status !== "done") return;
+
+        const timer = setTimeout(() => {
+            setUploadProgress(IDLE_UPLOAD_PROGRESS);
+        }, 2200);
+
+        return () => clearTimeout(timer);
+    }, [uploadProgress.status]);
+
     const handleSettingsChange = (newSettings: AppSettings) => {
         if (!requireAuth()) return;
 
@@ -315,8 +407,11 @@ export default function HomeClient() {
 
     const selectSession = async (session: ChatSession) => {
         setSessionId(session.id);
+        setIsSwitchingSession(true);
         setIsSessionLoading(true);
         setSessionError(false);
+        setMessages([]);
+        setUploadProgress(IDLE_UPLOAD_PROGRESS);
         try {
             const msgs = await getSessionMessagesAPI(session.id);
             const uiMessages: ChatMessageType[] = (msgs as DBMessage[]).map((m) => ({
@@ -341,6 +436,7 @@ export default function HomeClient() {
             toast.error("Failed to load conversation");
         } finally {
             setIsSessionLoading(false);
+            setIsSwitchingSession(false);
         }
     };
 
@@ -370,16 +466,52 @@ export default function HomeClient() {
     const handleUpload = async (files: File[]) => {
         if (!requireAuth()) return;
         if (!sessionId) return;
+        if (uploadProgress.status === "uploading" || uploadProgress.status === "processing") {
+            toast.info("Please wait for the current upload to finish.");
+            return;
+        }
 
-        setIsUploading(true);
+        const fileNames = files.map((file) => file.name);
+        const uploadLabel = fileNames.length === 1 ? fileNames[0] : `${fileNames.length} files`;
+        setPendingUploadFiles(files);
+        setUploadProgress({
+            status: "uploading",
+            percent: 0,
+            fileName: uploadLabel,
+            files: fileNames,
+            error: undefined,
+        });
+
         try {
             const result = await uploadFiles(sessionId, files, {
                 async_mode: settings.async_mode,
                 enable_ocr: settings.enable_ocr,
                 extract_tables: settings.extract_tables,
+            }, (percent) => {
+                setUploadProgress((prev) => ({
+                    ...prev,
+                    status: "uploading",
+                    percent,
+                    fileName: uploadLabel,
+                    files: fileNames,
+                    error: undefined,
+                }));
             });
 
-            const fileNames = files.map((f) => f.name);
+            const shouldShowProcessing =
+                settings.async_mode ||
+                result.ingestion_status === "queued" ||
+                result.ingestion_status === "processing";
+
+            setUploadProgress((prev) => ({
+                ...prev,
+                status: shouldShowProcessing ? "processing" : "done",
+                percent: 100,
+                fileName: uploadLabel,
+                files: fileNames,
+                error: undefined,
+            }));
+
             setUploadedFiles((prev) => [...prev, ...fileNames]);
             setSessions((prev) =>
                 prev.map((s) => {
@@ -392,13 +524,81 @@ export default function HomeClient() {
             );
 
             await refreshSessionInfo(sessionId, true);
+            setPendingUploadFiles(null);
 
-            if (result.ingestion_status === "queued") {
+            if (
+                result.ingestion_status === "queued" ||
+                result.ingestion_status === "processing"
+            ) {
                 toast.success("Files queued for ingestion", {
                     description: "You can query after status becomes ready.",
                 });
+            } else if (result.ingestion_status === "failed") {
+                const issue = formatIngestionError(result);
+                const description = formatIngestionDescription(result);
+                if (issue.severity === "warning") {
+                    toast.warning(issue.title, { description });
+                    setUploadProgress((prev) => ({
+                        ...prev,
+                        status: "done",
+                        percent: 100,
+                        error: undefined,
+                    }));
+                } else {
+                    toast.error(issue.title, { description });
+                    setUploadProgress((prev) => ({
+                        ...prev,
+                        status: "error",
+                        error: description,
+                    }));
+                }
             } else {
-                toast.success(`${fileNames.join(", ")} uploaded successfully`);
+                const warningCount = result.summary?.warning_files ?? 0;
+                const failedCount = result.summary?.failed_files ?? 0;
+                const resultWarningsFromFiles =
+                    result.file_results?.some(
+                        (item) =>
+                            String(item.status).toLowerCase() === "warning" ||
+                            String(item.severity).toLowerCase() === "warning"
+                    ) ?? false;
+                const resultFailuresFromFiles =
+                    result.file_results?.some(
+                        (item) =>
+                            String(item.status).toLowerCase() === "failed" ||
+                            String(item.severity).toLowerCase() === "error"
+                    ) ?? false;
+                const hasResultWarning =
+                    result.ingestion_status === "ready_with_warnings" ||
+                    warningCount > 0 ||
+                    resultWarningsFromFiles;
+                const hasResultFailure = failedCount > 0 || resultFailuresFromFiles;
+
+                if (hasResultWarning || hasResultFailure) {
+                    const issue = formatIngestionError(result);
+                    const description = formatIngestionDescription(result);
+                    toast.warning("Upload completed with warnings", {
+                        description:
+                            description === "The document could not be processed."
+                                ? "Some files could not be processed. Check ingestion details."
+                                : description,
+                    });
+                    if (issue.severity === "error") {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            status: "error",
+                            error: description,
+                        }));
+                    } else {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            status: "done",
+                            percent: 100,
+                            error: undefined,
+                        }));
+                    }
+                } else {
+                    toast.success(`${fileNames.join(", ")} uploaded successfully`);
+                }
             }
         } catch (error) {
             console.error("Upload failed:", error);
@@ -406,17 +606,36 @@ export default function HomeClient() {
             if (error instanceof ApiError && error.status === 404) {
                 toast.error("Session expired. Creating a new one.");
                 handleNewSession();
+                setUploadProgress({
+                    status: "error",
+                    percent: 0,
+                    fileName: uploadLabel,
+                    files: fileNames,
+                    error: "Session expired while uploading.",
+                });
                 return;
             }
 
             if (error instanceof ApiError && error.status === 429) {
                 toast.error("Upload rate limit reached. Try again shortly.");
+                setUploadProgress({
+                    status: "error",
+                    percent: 0,
+                    fileName: uploadLabel,
+                    files: fileNames,
+                    error: "Upload rate limit reached. Try again shortly.",
+                });
                 return;
             }
 
             toast.error("Upload failed. Please try again.");
-        } finally {
-            setIsUploading(false);
+            setUploadProgress({
+                status: "error",
+                percent: 0,
+                fileName: uploadLabel,
+                files: fileNames,
+                error: error instanceof Error ? error.message : "Upload failed. Please try again.",
+            });
         }
     };
 
@@ -455,9 +674,13 @@ export default function HomeClient() {
         }
 
         if (ingestionStatus === "failed") {
-            toast.error("Document ingestion failed", {
-                description: sessionInfo?.ingestion_error || "Please upload documents again.",
-            });
+            const ingestionInfo = formatIngestionError(sessionInfo);
+            const description = formatIngestionDescription(sessionInfo);
+            if (ingestionInfo.severity === "warning") {
+                toast.warning(ingestionInfo.title, { description });
+            } else {
+                toast.error("Document ingestion failed", { description });
+            }
             return;
         }
 
@@ -717,6 +940,14 @@ export default function HomeClient() {
         }
     };
 
+    const handleRetryUpload = () => {
+        if (!pendingUploadFiles || pendingUploadFiles.length === 0) {
+            setUploadProgress(IDLE_UPLOAD_PROGRESS);
+            return;
+        }
+        handleUpload(pendingUploadFiles);
+    };
+
     const sidebarProps = {
         onUpload: handleUpload,
         onNewSession: handleNewSession,
@@ -725,7 +956,8 @@ export default function HomeClient() {
         sessions,
         currentSessionId: sessionId,
         uploadedFiles,
-        isUploading,
+        uploadProgress,
+        onRetryUpload: handleRetryUpload,
         settings,
         onSettingsChange: handleSettingsChange,
         sessionInfo,
@@ -739,7 +971,12 @@ export default function HomeClient() {
         );
     }
 
+    if (!userId) {
+        return <HeroSection onGetStarted={() => openSignIn()} />;
+    }
+
     const usageBlocked = !!usageInfo && usageInfo.quota.remaining_today <= 0;
+    const languageKey = settings.language === "id" ? "id" : "en";
 
     return (
         <div className="flex h-dvh overflow-hidden bg-background">
@@ -747,12 +984,16 @@ export default function HomeClient() {
                 <AppSidebar {...sidebarProps} />
             </div>
 
-            <div className="flex flex-1 flex-col min-h-0">
-                <div className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 backdrop-blur-md px-4 py-3 md:hidden">
-                    <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 flex-col min-h-0">
+                <div className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/80 px-3 py-2.5 backdrop-blur-md md:hidden">
+                    <div className="flex min-w-0 items-center gap-2.5">
                         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                             <SheetTrigger asChild>
-                                <Button variant="ghost" size="icon" className="shrink-0">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-11 w-11 shrink-0"
+                                >
                                     <Menu className="h-5 w-5" />
                                 </Button>
                             </SheetTrigger>
@@ -760,22 +1001,12 @@ export default function HomeClient() {
                                 <AppSidebar {...sidebarProps} />
                             </SheetContent>
                         </Sheet>
-                        <h1 className="text-lg font-semibold">Synapse</h1>
+                        <h1 className="truncate text-lg font-semibold">Synapse</h1>
                     </div>
 
-                    {!userId ? (
-                        <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => openSignIn()}
-                            className="gap-2"
-                        >
-                            <LogIn className="h-4 w-4" />
-                            Sign In
-                        </Button>
-                    ) : (
+                    <div className="shrink-0">
                         <UserButton afterSignOutUrl="/" />
-                    )}
+                    </div>
                 </div>
 
                 {usageBlocked && (
@@ -791,74 +1022,22 @@ export default function HomeClient() {
                     className="flex-1 w-full min-w-0 overflow-y-auto overflow-x-hidden p-0 md:p-4"
                     ref={scrollRef}
                 >
-                    <div className="mx-auto max-w-3xl w-full flex flex-col gap-4">
+                    <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-4">
                         {messages.length === 0 ? (
-                            <div className="flex h-full min-h-[60vh] items-center justify-center">
-                                <div className="text-center">
-                                    <h1 className="text-4xl font-bold">Synapse</h1>
-                                    <p className="mt-2 text-muted-foreground">
-                                        Upload documents and start asking questions
-                                    </p>
-
-                                    {isSessionLoading && (
-                                        <div className="mt-6 flex items-center justify-center gap-2 text-muted-foreground">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            <span className="text-sm">Connecting to server...</span>
-                                        </div>
-                                    )}
-
-                                    {sessionError && !isSessionLoading && (
-                                        <div className="mt-6">
-                                            <p className="text-sm text-destructive">
-                                                Failed to connect to server
-                                            </p>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="mt-3"
-                                                onClick={handleNewSession}
-                                            >
-                                                <RefreshCw className="mr-2 h-3 w-3" />
-                                                Retry
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {sessionInfo &&
-                                        PENDING_INGESTION.has(sessionInfo.ingestion_status || "") && (
-                                            <div className="mt-6 flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                <span className="text-sm">
-                                                    Documents are being processed (
-                                                    {sessionInfo.ingestion_status})
-                                                </span>
-                                            </div>
-                                        )}
-
-                                    {sessionInfo?.ingestion_status === "failed" && (
-                                        <div className="mt-6 text-sm text-destructive">
-                                            Ingestion failed:{" "}
-                                            {sessionInfo.ingestion_error || "unknown error"}
-                                        </div>
-                                    )}
-
-                                    {(!userId || (isSessionReady && !isSessionLoading && !sessionError)) && (
-                                        <div className="mt-8 grid gap-2 sm:grid-cols-2 text-left max-w-lg mx-auto">
-                                            {EXAMPLE_PROMPTS[settings.language as "id" | "en"]?.map(
-                                                (prompt) => (
-                                                    <button
-                                                        key={prompt}
-                                                        onClick={() => handleSend(prompt)}
-                                                        className="rounded-lg border border-border/50 p-3 text-sm text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
-                                                    >
-                                                        {prompt}
-                                                    </button>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            isSessionLoading && isSwitchingSession && !sessionError ? (
+                                <MessageSkeleton />
+                            ) : (
+                                <EmptyState
+                                    examplePrompts={EXAMPLE_PROMPTS[languageKey]}
+                                    uploadedFiles={uploadedFiles}
+                                    sessionInfo={sessionInfo}
+                                    isSessionLoading={isSessionLoading}
+                                    sessionError={sessionError}
+                                    onRetry={handleNewSession}
+                                    onPromptSelect={handleSend}
+                                    onOpenSidebar={() => setSidebarOpen(true)}
+                                />
+                            )
                         ) : (
                             <div className="space-y-4">
                                 {messages.map((msg, idx) => {
@@ -904,11 +1083,11 @@ export default function HomeClient() {
                     </div>
                 </div>
 
-                <div className="border-t border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4">
+                <div className="bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-backdrop-filter:bg-background/60">
                     <div className="mx-auto w-full max-w-3xl">
                         <ChatInput
                             onSend={handleSend}
-                            disabled={isStreaming || (!!userId && (!isSessionReady || usageBlocked))}
+                            disabled={isStreaming || !isSessionReady || usageBlocked}
                             isStreaming={isStreaming}
                             onStop={handleStop}
                         />

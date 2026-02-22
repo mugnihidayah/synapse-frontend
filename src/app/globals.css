@@ -212,3 +212,35 @@
   border-color: oklch(1 0 0 / 10%);
   margin: 1.5rem 0;
 }
+
+@keyframes synapse-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-synapse-float {
+  animation: synapse-float 8s ease-in-out infinite;
+}
+
+@keyframes synapse-shimmer {
+  0% {
+    transform: translateX(-35%);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateX(35%);
+    opacity: 0.2;
+  }
+}
+
+.animate-synapse-shimmer {
+  animation: synapse-shimmer 11s ease-in-out infinite;
+}

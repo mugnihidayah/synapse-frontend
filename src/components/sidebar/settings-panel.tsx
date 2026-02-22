@@ -48,7 +48,7 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
                             size="sm"
                             onClick={() => setTheme(value)}
                             className={cn(
-                                "h-7 flex-1 rounded-md px-2",
+                                "h-10 flex-1 rounded-md px-2",
                                 theme === value && "bg-background shadow-sm"
                             )}
                         >
@@ -67,7 +67,7 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
                         updateSettings({ language: value })
                     }
                 >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-11 text-sm">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -86,7 +86,7 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
                         updateSettings({ model: value })
                     }
                 >
-                    <SelectTrigger className="h-8 text-xs truncate">
+                    <SelectTrigger className="h-11 text-sm truncate">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -122,34 +122,37 @@ export function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps
                     min={0}
                     max={1}
                     step={0.1}
-                    className="py-1"
+                    className="py-2"
                 />
             </div>
 
             {/* Upload Options */}
             <div className="space-y-2 rounded-md border border-border/50 p-3">
                 <p className="text-xs font-medium text-foreground">Upload Options</p>
-                <label className="flex items-center gap-2 text-xs">
+                <label className="flex min-h-11 items-center gap-2 text-xs">
                     <input
                         type="checkbox"
                         checked={settings.async_mode}
                         onChange={(e) => updateSettings({ async_mode: e.target.checked })}
+                        className="h-4 w-4"
                     />
                     Async ingestion
                 </label>
-                <label className="flex items-center gap-2 text-xs">
+                <label className="flex min-h-11 items-center gap-2 text-xs">
                     <input
                         type="checkbox"
                         checked={settings.enable_ocr}
                         onChange={(e) => updateSettings({ enable_ocr: e.target.checked })}
+                        className="h-4 w-4"
                     />
                     Enable OCR
                 </label>
-                <label className="flex items-center gap-2 text-xs">
+                <label className="flex min-h-11 items-center gap-2 text-xs">
                     <input
                         type="checkbox"
                         checked={settings.extract_tables}
                         onChange={(e) => updateSettings({ extract_tables: e.target.checked })}
+                        className="h-4 w-4"
                     />
                     Extract tables
                 </label>
