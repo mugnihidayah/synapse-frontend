@@ -8,6 +8,8 @@ This repository is the frontend app. It proxies requests to the backend service:
 
 ![Synapse UI](./public/synapse-preview.png)
 
+![Synapse UI 2](./public/synapse-preview-2.png)
+
 ## What You Get
 
 - Clerk authentication with a polished landing experience for signed-out users
