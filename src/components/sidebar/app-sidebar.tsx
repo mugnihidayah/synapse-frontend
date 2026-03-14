@@ -8,7 +8,6 @@ import {
     FileText,
     Plus,
     Loader2,
-    CheckCircle2,
     AlertCircle,
     Trash2,
     MessageSquare,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatIngestionError } from "@/lib/ingestion-error";
 import { cn } from "@/lib/utils";
-import { SettingsPanel } from "./settings-panel";
+import { SettingsModal } from "@/components/settings-modal";
 import { AppSettings, ChatSession, SessionInfo, UploadProgress } from "@/types";
 import { UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { getSupportedFormatsAPI } from "@/lib/api";
@@ -36,6 +35,7 @@ interface AppSidebarProps {
     settings: AppSettings;
     onSettingsChange: (settings: AppSettings) => void;
     sessionInfo?: SessionInfo | null;
+    onDeleteDocument: (fileName: string) => Promise<void>;
 }
 
 export function AppSidebar({
@@ -51,6 +51,7 @@ export function AppSidebar({
     settings,
     onSettingsChange,
     sessionInfo,
+    onDeleteDocument,
 }: AppSidebarProps) {
     const { userId } = useAuth();
     const { openSignIn } = useClerk();
@@ -244,7 +245,7 @@ export function AppSidebar({
                                             >
                                                 {ingestionErrorInfo.title}
                                             </p>
-                                            <p className="text-muted-foreground break-words">
+                                            <p className="text-muted-foreground wrap-break-word">
                                                 {ingestionErrorInfo.description}
                                             </p>
                                             {ingestionErrorInfo.hint && (
@@ -359,14 +360,25 @@ export function AppSidebar({
                                         {uploadedFiles.map((file, i) => {
                                             const Icon = getFileIcon(file);
                                             return (
-                                                <div
-                                                    key={i}
-                                                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-muted/30"
-                                                >
-                                                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                                    <span className="truncate flex-1">{file}</span>
-                                                    <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
-                                                </div>
+                                                    <div
+                                                        key={i}
+                                                        className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-muted/30"
+                                                    >
+                                                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                        <span className="truncate flex-1">{file}</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onDeleteDocument(file);
+                                                            }}
+                                                            title="Delete document"
+                                                        >
+                                                            <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                                                        </Button>
+                                                    </div>
                                             );
                                         })}
                                     </div>
@@ -381,7 +393,7 @@ export function AppSidebar({
 
             {/* Footer: Settings & User */}
             <div className="p-4 space-y-4">
-                <SettingsPanel settings={settings} onSettingsChange={onSettingsChange} />
+                <SettingsModal settings={settings} onSettingsChange={onSettingsChange} />
 
                 {userId ? (
                     <div className="flex items-center gap-3 px-2">

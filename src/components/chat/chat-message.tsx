@@ -166,14 +166,14 @@ export function ChatMessage({
                 {isThinking ? (
                     <ThinkingDots />
                 ) : (
-                <div className="prose prose-invert prose-base w-full max-w-full break-words prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2">
+                <div className="prose prose-invert prose-base w-full max-w-full wrap-break-word prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2">
                         <ReactMarkdown 
                             remarkPlugins={[remarkGfm, remarkMath]} 
                             rehypePlugins={[rehypeKatex, rehypeHighlight]}
                             components={{
                                 table: ({ ...props }) => (
                                     <div className="my-4 block w-full max-w-full overflow-x-auto rounded-lg border border-border/50 bg-card/30">
-                                        <table {...props} className="w-full min-w-[440px] text-sm" />
+                                        <table {...props} className="w-full min-w-110 text-sm" />
                                     </div>
                                 ),
                                 pre: ({ ...props }) => (

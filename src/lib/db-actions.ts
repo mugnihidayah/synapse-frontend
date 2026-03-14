@@ -99,3 +99,16 @@ export async function addFileToSession(chatId: string, fileName: string, fileTyp
         WHERE id = ${chatId}
     `);
 }
+
+export async function removeFileFromSession(chatId: string, fileName: string) {
+    // Remove the object with the matching name from the files jsonb array
+    await db.execute(sql`
+        UPDATE synapse_chats
+        SET files = (
+            SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+            FROM jsonb_array_elements(files) AS elem
+            WHERE elem->>'name' != ${fileName}
+        )
+        WHERE id = ${chatId}
+    `);
+}

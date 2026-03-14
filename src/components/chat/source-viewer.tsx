@@ -127,7 +127,7 @@ function TextViewer({ source, keywords }: { source: Source; keywords: string[] }
                 </p>
             )}
             <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-                <p className="whitespace-pre-wrap break-words text-sm leading-7 text-foreground/90">
+                <p className="whitespace-pre-wrap wrap-break-word text-sm leading-7 text-foreground/90">
                     {segments.map((segment, i) => (
                         <Fragment key={i}>
                             {segment.highlighted ? (

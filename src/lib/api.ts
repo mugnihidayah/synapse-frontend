@@ -179,6 +179,17 @@ export async function getSessionDocumentsAPI(
     return parseResponse<SessionDocumentsResponse>(res, "Failed to fetch documents");
 }
 
+export async function deleteSessionDocumentAPI(sessionId: string, fileName: string) {
+    const params = new URLSearchParams();
+    params.set("filename", fileName);
+
+    const res = await fetch(`/api/sessions/${sessionId}/documents?${params.toString()}`, {
+        method: "DELETE",
+    });
+
+    return parseResponse<{ success: boolean; message: string }>(res, "Failed to delete document");
+}
+
 export async function getSupportedFormatsAPI(): Promise<SupportedFormatsResponse> {
     const res = await fetch("/api/supported-formats", { cache: "no-store" });
     return parseResponse<SupportedFormatsResponse>(res, "Failed to fetch supported formats");

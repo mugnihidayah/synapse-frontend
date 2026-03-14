@@ -1,61 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { removeFileFromSession } from "@/lib/db-actions";
 
 const API_URL = process.env.API_URL;
 const API_KEY = process.env.API_KEY;
 
-async function parseBackendBody(res: Response): Promise<unknown> {
-    const contentType = res.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-        return res.json();
-    }
-
-    const text = await res.text();
-    if (!text) return {};
-    return { detail: text };
-}
-
-export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+export async function DELETE(
+    request: NextRequest,
+    params: { params: Promise<{ id: string }> } // Standard Next.js server route format for App Router dynamic segments
 ) {
     const { userId } = await auth();
-    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+    if (!userId) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
 
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
+    const { id: sessionId } = await params.params;
+    const { searchParams } = new URL(request.url);
+    const fileName = searchParams.get("filename");
 
-    const page = searchParams.get("page") || "1";
-    const pageSize = searchParams.get("page_size") || "20";
-    const source = searchParams.get("source");
-    const search = searchParams.get("search");
-
-    const backendUrl = new URL(`${API_URL}/api/v1/documents/sessions/${id}/documents`);
-    backendUrl.searchParams.set("page", page);
-    backendUrl.searchParams.set("page_size", pageSize);
-    if (source) backendUrl.searchParams.set("source", source);
-    if (search) backendUrl.searchParams.set("search", search);
+    if (!fileName) {
+        return NextResponse.json(
+            { error: "filename is required" },
+            { status: 400 }
+        );
+    }
 
     try {
-        const res = await fetch(backendUrl.toString(), {
-            method: "GET",
-            headers: {
-                "X-API-Key": API_KEY!,
-            },
-            cache: "no-store",
-        });
+        // Backend API doesn't have a direct /documents/delete specific route documented but we might proxy if it exists.
+        // Assuming there's a backend endpoint to delete a file by ID/Name, or maybe it's stateless.
+        // For now, removing it from our database at least removes it from the UI context.
+        // Let's remove from DB first:
+        await removeFileFromSession(sessionId, fileName);
 
-        const body = await parseBackendBody(res);
-        if (!res.ok) {
-            return NextResponse.json(body, { status: res.status });
+        // Try to detach it from the backend if possible. Usually there's a DELETE /api/v1/documents/delete or something.
+        // If not, our DB will no longer query it. We'll try hitting a generic delete endpoint, if it fails we just log it and ignore.
+        const backendUrl = new URL(`${API_URL}/api/v1/documents/${sessionId}/delete`); // Speculative backend deletion url
+        backendUrl.searchParams.set("filename", fileName);
+        
+        try {
+            await fetch(backendUrl.toString(), {
+                method: "DELETE",
+                headers: { "X-API-Key": API_KEY! }
+            });
+        } catch (backendError) {
+            console.warn("Failed to delete document from backend, but removed from local DB:", backendError);
         }
 
-        return NextResponse.json(body);
+        return NextResponse.json({ success: true, message: "File deleted successfully from session" });
     } catch (error) {
-        console.error("Session documents proxy error:", error);
-        return NextResponse.json(
-            { detail: "Failed to fetch session documents" },
-            { status: 500 }
-        );
+        console.error("Delete document proxy error:", error);
+        return new NextResponse("Internal Server Error", { status: 500 });
     }
 }

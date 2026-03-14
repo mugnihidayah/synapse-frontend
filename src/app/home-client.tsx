@@ -22,6 +22,7 @@ import {
     updatePreferencesAPI,
     updateSessionTitleAPI,
     uploadFiles,
+    deleteSessionDocumentAPI,
 } from "@/lib/api";
 import {
     formatIngestionDescription,
@@ -460,6 +461,25 @@ export default function HomeClient() {
         } catch (error) {
             console.error("Delete failed", error);
             toast.error("Failed to delete chat");
+        }
+    };
+
+    const handleDeleteDocument = async (fileName: string) => {
+        if (!sessionId) return;
+        try {
+            await deleteSessionDocumentAPI(sessionId, fileName);
+            setUploadedFiles(prev => prev.filter(f => f !== fileName));
+            setSessions(prev => prev.map(s => {
+                if (s.id === sessionId) {
+                    return { ...s, files: s.files?.filter(f => f.name !== fileName) || [] };
+                }
+                return s;
+            }));
+            await refreshSessionInfo(sessionId, true);
+            toast.success("Document deleted");
+        } catch (error) {
+            console.error("Failed to delete document", error);
+            toast.error("Failed to delete document");
         }
     };
 
@@ -961,6 +981,7 @@ export default function HomeClient() {
         settings,
         onSettingsChange: handleSettingsChange,
         sessionInfo,
+        onDeleteDocument: handleDeleteDocument,
     };
 
     if (!isLoaded) {
