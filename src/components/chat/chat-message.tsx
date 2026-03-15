@@ -5,6 +5,7 @@ import { ChatMessage as ChatMessageType } from "@/types";
 import { cn } from "@/lib/utils";
 import { Bot, User, Copy, Check, Download, ThumbsUp, ThumbsDown } from "lucide-react";
 import { SourceCards } from "./source-cards";
+import { AgentActivity } from "./agent-activity";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -163,7 +164,11 @@ export function ChatMessage({
                     )}
                 </div>
 
-                {isThinking ? (
+                {message.agent_steps && message.agent_steps.length > 0 && (
+                    <AgentActivity steps={message.agent_steps} isStreaming={message.isStreaming} />
+                )}
+
+                {isThinking && (!message.agent_steps || message.agent_steps.length === 0) ? (
                     <ThinkingDots />
                 ) : (
                 <div className="prose prose-invert prose-base w-full max-w-full wrap-break-word prose-p:leading-7 prose-headings:mb-3 prose-headings:mt-6 prose-li:my-1 prose-ul:my-2 prose-ol:my-2">

@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Square } from "lucide-react";
+import { Send, Square, Sparkles, Bot } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
     onSend: (message: string) => void;
     disabled?: boolean;
     isStreaming?: boolean;
     onStop?: () => void;
+    agentMode?: boolean;
+    onAgentModeChange?: (mode: boolean) => void;
 }
 
-export function ChatInput({ onSend, disabled, isStreaming, onStop }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, isStreaming, onStop, agentMode, onAgentModeChange }: ChatInputProps) {
     const [input, setInput] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,7 +40,30 @@ export function ChatInput({ onSend, disabled, isStreaming, onStop }: ChatInputPr
     };
 
     return (
-        <form onSubmit={handleSubmit} className="border-t border-border px-3 py-3 sm:p-4">
+        <form onSubmit={handleSubmit} className="border-t border-border px-3 py-3 sm:p-4 bg-background">
+            {onAgentModeChange && (
+                <div className="mb-2 flex items-center">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onAgentModeChange(!agentMode)}
+                        className={cn(
+                            "h-8 gap-1.5 rounded-full px-3 text-xs font-medium transition-all shadow-sm",
+                            agentMode 
+                                ? "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary border border-primary/20" 
+                                : "text-muted-foreground hover:bg-muted border border-transparent"
+                        )}
+                    >
+                        {agentMode ? (
+                            <Sparkles className="h-3.5 w-3.5" />
+                        ) : (
+                            <Bot className="h-3.5 w-3.5" />
+                        )}
+                        Agentic Mode: {agentMode ? "On" : "Off"}
+                    </Button>
+                </div>
+            )}
             <div className="flex items-end gap-2 sm:gap-2.5">
                 <textarea
                     ref={textareaRef}

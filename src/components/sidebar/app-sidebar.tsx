@@ -23,7 +23,7 @@ import { UserButton, useAuth, useClerk } from "@clerk/nextjs";
 import { getSupportedFormatsAPI } from "@/lib/api";
 
 interface AppSidebarProps {
-    onUpload: (files: File[]) => Promise<void>;
+    onUpload: (files: File[]) => void;
     onNewSession: () => void;
     onSelectSession: (session: ChatSession) => void;
     onDeleteSession: (id: string, e: React.MouseEvent) => void;

@@ -104,6 +104,8 @@ export interface QueryRequest {
     include_debug?: boolean;
     strict_grounding?: boolean;
     enable_query_rewrite?: boolean;
+    agent_mode?: boolean;
+    max_agent_steps?: number;
 }
 
 export interface QueryDebug {
@@ -134,6 +136,14 @@ export interface QueryResponse {
     grounded?: boolean;
     grounding_score?: number;
     debug?: QueryDebug | null;
+    agent_iterations?: number;
+    agent_steps?: AgentStep[];
+}
+
+export interface AgentStep {
+    step_type: "thought" | "action" | "observation" | "Final_answer" | string;
+    content: string;
+    tool_name?: string | null;
 }
 
 export interface UsageResponse {
@@ -202,6 +212,8 @@ export interface ChatMessage {
     grounded?: boolean;
     grounding_score?: number;
     debug?: QueryDebug | null;
+    agent_iterations?: number;
+    agent_steps?: AgentStep[];
     timestamp: Date;
     isStreaming?: boolean;
     feedbackRating?: -1 | 0 | 1;
@@ -220,6 +232,8 @@ export interface AppSettings {
     async_mode: boolean;
     enable_ocr: boolean;
     extract_tables: boolean;
+    agent_mode: boolean;
+    max_agent_steps: number;
 }
 
 export type UploadProgressStatus =

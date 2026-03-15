@@ -71,6 +71,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     async_mode: true,
     enable_ocr: true,
     extract_tables: true,
+    agent_mode: false,
+    max_agent_steps: 5,
 };
 
 const PENDING_INGESTION = new Set(["queued", "processing"]);
@@ -449,41 +451,62 @@ export default function HomeClient() {
 
     const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
+
+        // 1. Optimistic Update
+        const previousSessions = [...sessions];
+        setSessions((prev) => prev.filter((s) => s.id !== id));
+
+        if (sessionId === id) {
+            handleNewSession();
+        }
+
+        // 2. Background API Call
         try {
             await deleteSessionAPI(id);
-            setSessions((prev) => prev.filter((s) => s.id !== id));
             toast.success("Chat deleted");
-            await refreshUsage(false);
-
-            if (sessionId === id) {
-                handleNewSession();
-            }
+            refreshUsage(false).catch(console.error);
         } catch (error) {
-            console.error("Delete failed", error);
+            console.error("Delete session failed", error);
             toast.error("Failed to delete chat");
+            // 3. Rollback on failure
+            setSessions(previousSessions);
+            if (sessionId === id) {
+                // If we optimistically cleared the session, we can't easily undo the UI route back to the specific chat without more complex logic,
+                // but at least the session reappears in the sidebar.
+            }
         }
     };
 
     const handleDeleteDocument = async (fileName: string) => {
         if (!sessionId) return;
+
+        // 1. Optimistic Update
+        const previousUploadedFiles = [...uploadedFiles];
+        const previousSessions = [...sessions];
+
+        setUploadedFiles(prev => prev.filter(f => f !== fileName));
+        setSessions(prev => prev.map(s => {
+            if (s.id === sessionId) {
+                return { ...s, files: s.files?.filter(f => f.name !== fileName) || [] };
+            }
+            return s;
+        }));
+
+        // 2. Background API Call
         try {
             await deleteSessionDocumentAPI(sessionId, fileName);
-            setUploadedFiles(prev => prev.filter(f => f !== fileName));
-            setSessions(prev => prev.map(s => {
-                if (s.id === sessionId) {
-                    return { ...s, files: s.files?.filter(f => f.name !== fileName) || [] };
-                }
-                return s;
-            }));
-            await refreshSessionInfo(sessionId, true);
             toast.success("Document deleted");
+            refreshSessionInfo(sessionId, true).catch(console.error);
         } catch (error) {
             console.error("Failed to delete document", error);
             toast.error("Failed to delete document");
+            // 3. Rollback on failure
+            setUploadedFiles(previousUploadedFiles);
+            setSessions(previousSessions);
         }
     };
 
-    const handleUpload = async (files: File[]) => {
+    const handleUpload = (files: File[]) => {
         if (!requireAuth()) return;
         if (!sessionId) return;
         if (uploadProgress.status === "uploading" || uploadProgress.status === "processing") {
@@ -494,6 +517,8 @@ export default function HomeClient() {
         const fileNames = files.map((file) => file.name);
         const uploadLabel = fileNames.length === 1 ? fileNames[0] : `${fileNames.length} files`;
         setPendingUploadFiles(files);
+        
+        // 1. Optimistic UI Updates
         setUploadProgress({
             status: "uploading",
             percent: 0,
@@ -501,23 +526,33 @@ export default function HomeClient() {
             files: fileNames,
             error: undefined,
         });
+        
+        const newFiles = files.map((f) => ({ name: f.name, type: f.type }));
+        setUploadedFiles((prev) => [...prev, ...fileNames]);
+        setSessions((prev) =>
+            prev.map((s) => {
+                if (s.id === sessionId) {
+                    return { ...s, files: [...(s.files || []), ...newFiles] };
+                }
+                return s;
+            })
+        );
 
-        try {
-            const result = await uploadFiles(sessionId, files, {
-                async_mode: settings.async_mode,
-                enable_ocr: settings.enable_ocr,
-                extract_tables: settings.extract_tables,
-            }, (percent) => {
-                setUploadProgress((prev) => ({
-                    ...prev,
-                    status: "uploading",
-                    percent,
-                    fileName: uploadLabel,
-                    files: fileNames,
-                    error: undefined,
-                }));
-            });
-
+        // 2. Background Upload Process
+        uploadFiles(sessionId, files, {
+            async_mode: settings.async_mode,
+            enable_ocr: settings.enable_ocr,
+            extract_tables: settings.extract_tables,
+        }, (percent) => {
+            setUploadProgress((prev) => ({
+                ...prev,
+                status: "uploading",
+                percent,
+                fileName: uploadLabel,
+                files: fileNames,
+                error: undefined,
+            }));
+        }).then(async (result) => {
             const shouldShowProcessing =
                 settings.async_mode ||
                 result.ingestion_status === "queued" ||
@@ -531,17 +566,6 @@ export default function HomeClient() {
                 files: fileNames,
                 error: undefined,
             }));
-
-            setUploadedFiles((prev) => [...prev, ...fileNames]);
-            setSessions((prev) =>
-                prev.map((s) => {
-                    if (s.id === sessionId) {
-                        const newFiles = files.map((f) => ({ name: f.name, type: f.type }));
-                        return { ...s, files: [...(s.files || []), ...newFiles] };
-                    }
-                    return s;
-                })
-            );
 
             await refreshSessionInfo(sessionId, true);
             setPendingUploadFiles(null);
@@ -617,14 +641,29 @@ export default function HomeClient() {
                         }));
                     }
                 } else {
-                    toast.success(`${fileNames.join(", ")} uploaded successfully`);
+                    toast.success("Upload successful", {
+                        description: "Documents processed and ready for querying.",
+                    });
                 }
             }
-        } catch (error) {
-            console.error("Upload failed:", error);
+        }).catch((error) => {
+            console.error("Upload failed", error);
+            
+            // Rollback optimistic update
+            setUploadedFiles((prev) => prev.filter((f) => !fileNames.includes(f)));
+            setSessions((prev) =>
+                prev.map((s) => {
+                    if (s.id === sessionId) {
+                        return { ...s, files: s.files?.filter((f) => !fileNames.includes(f.name)) || [] };
+                    }
+                    return s;
+                })
+            );
 
             if (error instanceof ApiError && error.status === 404) {
-                toast.error("Session expired. Creating a new one.");
+                toast.error("Session expired", {
+                    description: "Creating a new session...",
+                });
                 handleNewSession();
                 setUploadProgress({
                     status: "error",
@@ -656,7 +695,7 @@ export default function HomeClient() {
                 files: fileNames,
                 error: error instanceof Error ? error.message : "Upload failed. Please try again.",
             });
-        }
+        });
     };
 
     const handleStop = () => {
@@ -749,6 +788,8 @@ export default function HomeClient() {
                     strict_grounding: settings.strict_grounding,
                     enable_query_rewrite: settings.enable_query_rewrite,
                     filters: sanitizeFilters(settings.filters),
+                    agent_mode: settings.agent_mode,
+                    max_agent_steps: settings.max_agent_steps,
                 },
                 abortController.signal
             );
@@ -790,6 +831,23 @@ export default function HomeClient() {
                             throw new Error(String(parsed.error));
                         }
 
+                        if (parsed.step) {
+                            if (!streamMeta.agent_steps) streamMeta.agent_steps = [];
+                            (streamMeta.agent_steps as unknown[]).push(parsed.step);
+
+                            setMessages((prev) =>
+                                prev.map((msg) =>
+                                    msg.id === assistantId
+                                        ? {
+                                              ...msg,
+                                              agent_steps: (streamMeta.agent_steps as ChatMessageType["agent_steps"]) || [],
+                                          }
+                                        : msg
+                                )
+                            );
+                            continue;
+                        }
+
                         if (typeof parsed.chunk === "string") {
                             fullContent += parsed.chunk;
                             setMessages((prev) =>
@@ -805,7 +863,9 @@ export default function HomeClient() {
                             parsed.rewritten_query !== undefined ||
                             parsed.grounded !== undefined ||
                             parsed.grounding_score !== undefined ||
-                            parsed.debug !== undefined
+                            parsed.debug !== undefined ||
+                            parsed.agent_steps !== undefined ||
+                            parsed.agent_iterations !== undefined
                         ) {
                             // Accumulate metadata for persistence
                             if (parsed.sources) streamMeta.sources = parsed.sources;
@@ -814,6 +874,8 @@ export default function HomeClient() {
                             if (parsed.grounded !== undefined) streamMeta.grounded = parsed.grounded;
                             if (parsed.grounding_score !== undefined) streamMeta.grounding_score = parsed.grounding_score;
                             if (parsed.debug) streamMeta.debug = parsed.debug;
+                            if (parsed.agent_steps) streamMeta.agent_steps = parsed.agent_steps;
+                            if (parsed.agent_iterations !== undefined) streamMeta.agent_iterations = parsed.agent_iterations;
 
                             setMessages((prev) =>
                                 prev.map((msg) =>
@@ -840,6 +902,12 @@ export default function HomeClient() {
                                               debug:
                                                   (parsed.debug as ChatMessageType["debug"]) ??
                                                   msg.debug,
+                                              agent_steps:
+                                                  (parsed.agent_steps as ChatMessageType["agent_steps"]) ||
+                                                  msg.agent_steps,
+                                              agent_iterations:
+                                                  (parsed.agent_iterations as number | undefined) ??
+                                                  msg.agent_iterations,
                                           }
                                         : msg
                                 )
@@ -1111,6 +1179,8 @@ export default function HomeClient() {
                             disabled={isStreaming || !isSessionReady || usageBlocked}
                             isStreaming={isStreaming}
                             onStop={handleStop}
+                            agentMode={settings.agent_mode}
+                            onAgentModeChange={(agent_mode) => handleSettingsChange({ ...settings, agent_mode })}
                         />
                     </div>
                 </div>
