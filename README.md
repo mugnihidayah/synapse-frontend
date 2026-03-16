@@ -4,7 +4,6 @@
 
 ### Instant Document Insights - Client Application
 
-[![CI](https://github.com/mugnihidayah/synapse-frontend/workflows/CI/badge.svg)](https://github.com/mugnihidayah/synapse-frontend/actions)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -15,7 +14,7 @@
 
 [Features](#features) • [Quick Start](#quick-start) • [Environment Variables](#environment-variables) • [Tech Stack](#tech-stack)
 
-Backend API Repo: [mugnihidayah/synapse-instant-document-insight](https://github.com/mugnihidayah/synapse-instant-document-insight)
+Backend Repo: [mugnihidayah/synapse-instant-document-insight](https://github.com/mugnihidayah/synapse-instant-document-insight)
 
 Backend API Space: [mugnihidayah-synapse-rag-api.hf.space/docs](https://mugnihidayah-synapse-rag-api.hf.space/docs)
 
